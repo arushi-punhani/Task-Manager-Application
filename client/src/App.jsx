@@ -1,5 +1,6 @@
 import { Routes, Route, Link } from 'react-router-dom';
 import Placeholder from './pages/Placeholder.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 
 // UI-SHELL (owner: Arya). Each team member adds their own pages as routes here.
 export default function App() {
@@ -14,7 +15,7 @@ export default function App() {
       </nav>
       <Routes>
         <Route path="/" element={<Placeholder title="Task list (Aryan: TM-F-010 to TM-F-013)" />} />
-        <Route path="/dashboard" element={<Placeholder title="Dashboard (Arnav: TM-F-040)" />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<Placeholder title="Admin (Arnav: TM-F-050, TM-F-051)" />} />
         <Route path="/login" element={<Placeholder title="Login (Arya builds the page; Arushi builds the API)" />} />
         <Route path="/register" element={<Placeholder title="Register (Arya builds the page; Arushi builds the API)" />} />
