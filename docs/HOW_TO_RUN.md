@@ -32,3 +32,8 @@ In `server/.env` set `DEV_FAKE_USER_ID=1` (and `NODE_ENV=development`). The serv
 
 ## Where code goes
 One folder per module in `server/src/modules/`: auth, tasks, collab, notif, report, admin. Each has a `routes.js` with every endpoint from the SAD as a stub that returns 501. Replace a stub with the real code for your story, and keep the story ID (for example TM-F-010) in your commit message and PR.
+
+## Dashboard summary (TM-F-040)
+The authenticated endpoint `GET /api/v1/dashboard/summary` returns JSON with `pending`, `inProgress`, `completed`, and `overdue` integer counts. It counts non-deleted tasks that the signed-in user owns, is assigned to, or can access through a shared list. A task is overdue when it has a due date before the current database time and its status is not `COMPLETED`; overdue is a separate, overlapping count rather than a task status. The dashboard page is available at `/dashboard` in the client.
+
+Run the backend tests with `cd server && npm test` and build the frontend with `cd client && npm run build`.
