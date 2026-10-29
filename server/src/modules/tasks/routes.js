@@ -85,7 +85,25 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
     }
   });
 
-  router.delete('/:id', notImplemented('TM-F-012'));         // soft delete (set deleted_at)
+  // TM-F-012: soft delete (owner only). The row stays for 30 days (TM-NF-005) and the deletion is logged.
+  // One statement, so the delete and its audit entry succeed or fail together.
+  router.delete('/:id', requireTaskAccess('delete'), async (req, res, next) => {
+    try {
+      await db.query(
+        `WITH deleted AS (
+           UPDATE tasks SET deleted_at = NOW()
+           WHERE id = $1 AND deleted_at IS NULL
+           RETURNING id
+         )
+         INSERT INTO audit_log (actor_id, action, target_id)
+         SELECT $2, 'TASK_DELETED', id FROM deleted`,
+        [req.task.id, req.user.id],
+      );
+      return res.status(204).end();
+    } catch (error) {
+      return next(error);
+    }
+  });
   // TM-F-013: mark complete (owner, assignee or EDIT share). Safe to repeat: the first completion time is kept.
   router.post('/:id/complete', requireTaskAccess('complete'), async (req, res, next) => {
     try {
