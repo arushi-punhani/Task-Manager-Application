@@ -1,0 +1,25 @@
+﻿.app-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+}
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.app-nav a {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 400px) {
+  .app-shell {
+    padding: 10px;
+  }
+  .app-nav {
+    gap: 10px;
+  }
+}
