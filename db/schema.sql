@@ -12,6 +12,23 @@ CREATE TABLE users (
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 
+CREATE TABLE auth_sessions (
+  token_id   VARCHAR(36) PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_auth_sessions_user ON auth_sessions(user_id);
+
+CREATE TABLE email_verification_tokens (
+  id         SERIAL PRIMARY KEY,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash VARCHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ
+);
+
 CREATE TABLE tasks (
   id           SERIAL PRIMARY KEY,
   owner_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
