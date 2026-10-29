@@ -86,8 +86,42 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
   });
 
   router.delete('/:id', notImplemented('TM-F-012'));         // soft delete (set deleted_at)
-  router.post('/:id/complete', notImplemented('TM-F-013'));
-  router.post('/:id/reopen', notImplemented('TM-F-013'));
+  // TM-F-013: mark complete (owner, assignee or EDIT share). Safe to repeat: the first completion time is kept.
+  router.post('/:id/complete', requireTaskAccess('complete'), async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `UPDATE tasks
+         SET status = 'COMPLETED', completed_at = COALESCE(completed_at, NOW())
+         WHERE id = $1 AND deleted_at IS NULL
+         RETURNING *`,
+        [req.task.id],
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Task not found' });
+      return res.json(toTask(result.rows[0]));
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  // TM-F-013: reopen a completed task. Reopening a task that is not completed is a conflict (409).
+  router.post('/:id/reopen', requireTaskAccess('complete'), async (req, res, next) => {
+    if (req.task.status !== 'COMPLETED') {
+      return res.status(409).json({ error: 'Only a completed task can be reopened' });
+    }
+    try {
+      const result = await db.query(
+        `UPDATE tasks
+         SET status = 'PENDING', completed_at = NULL
+         WHERE id = $1 AND deleted_at IS NULL
+         RETURNING *`,
+        [req.task.id],
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Task not found' });
+      return res.json(toTask(result.rows[0]));
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   return router;
 }
