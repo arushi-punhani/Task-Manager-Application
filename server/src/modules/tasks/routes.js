@@ -2,7 +2,6 @@
 // Every route requires a logged-in user.
 const express = require('express');
 const pool = require('../../config/db');
-const notImplemented = require('../../middleware/notImplemented');
 const { authenticate } = require('../../middleware/auth');
 const { createRequireTaskAccess } = require('../../middleware/taskAccess');
 const { validateTaskFields, toTask } = require('./validation');
@@ -31,7 +30,31 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
     }
   });
 
-  router.get('/', notImplemented('TM-F-015'));               // search, filter, sort: ?q=&status=&priority=&tag=&due=&sort= (TM-F-016)
+  // Basic task list for the Tasks page: active tasks the user owns, is assigned, or can see via a shared list.
+  // Search, filter and sort (?q=&status=&priority=&tag=&due=&sort=) are TM-F-015 / TM-F-016 (Sprint 2).
+  router.get('/', async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `SELECT t.*
+         FROM tasks t
+         WHERE t.deleted_at IS NULL
+           AND (
+             t.owner_id = $1
+             OR t.assignee_id = $1
+             OR EXISTS (
+               SELECT 1 FROM list_shares ls
+               WHERE ls.list_id = t.list_id AND ls.user_id = $1
+             )
+           )
+         ORDER BY t.created_at DESC, t.id DESC
+         LIMIT 100`,
+        [req.user.id],
+      );
+      return res.json({ tasks: result.rows.map(toTask) });
+    } catch (error) {
+      return next(error);
+    }
+  });
   // TM-F-011: edit title, description, due date, priority or status (owner, or a list share with EDIT).
   const EDITABLE_COLUMNS = {
     title: 'title',

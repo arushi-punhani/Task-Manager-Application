@@ -2,6 +2,7 @@
 import Placeholder from './pages/Placeholder.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import TaskDetail from './pages/TaskDetail.jsx';
+import Tasks from './pages/Tasks.jsx';
 
 export default function App() {
   return (
@@ -15,7 +16,7 @@ export default function App() {
         <Link to="/register">Register</Link>
       </nav>
       <Routes>
-        <Route path="/" element={<Placeholder title="Task list (Aryan: TM-F-010 to TM-F-013)" />} />
+        <Route path="/" element={<Tasks />} />
         <Route path="/tasks/:id" element={<TaskDetail />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<Placeholder title="Admin (Arnav: TM-F-050, TM-F-051)" />} />
