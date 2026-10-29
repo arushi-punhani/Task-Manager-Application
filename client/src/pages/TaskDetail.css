@@ -1,0 +1,120 @@
+﻿.task-detail {
+  width: 100%;
+  min-width: 0;
+  color: #202938;
+}
+.task-detail * {
+  box-sizing: border-box;
+}
+.task-detail__header {
+  margin-bottom: 24px;
+  overflow-wrap: anywhere;
+}
+.task-detail__eyebrow {
+  color: #5b6473;
+  font-size: .8rem;
+  letter-spacing: .08em;
+}
+.task-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.task-detail__panel {
+  min-width: 0;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid #dce1e8;
+  border-radius: 12px;
+  background: #fff;
+}
+.task-detail__panel h2 {
+  margin-top: 0;
+  font-size: 1.15rem;
+}
+.task-detail label,
+.task-detail input,
+.task-detail textarea {
+  display: block;
+  width: 100%;
+}
+.task-detail label {
+  margin: 12px 0 6px;
+  font-weight: 600;
+}
+.task-detail input,
+.task-detail textarea {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #bbc4d0;
+  border-radius: 7px;
+  font: inherit;
+}
+.task-detail textarea {
+  resize: vertical;
+}
+.task-detail button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 7px;
+  background: #263d73;
+  color: white;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.task-detail button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.task-detail small {
+  display: block;
+  margin-top: 8px;
+  color: #5b6473;
+  overflow-wrap: anywhere;
+}
+.task-detail__message {
+  padding: 12px;
+  border-radius: 8px;
+  background: #eef3ff;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .task-detail__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .task-detail__panel {
+    padding: 14px;
+  }
+}
+.task-detail select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #bbc4d0;
+  border-radius: 7px;
+  background: white;
+  font: inherit;
+}
+.task-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.task-detail__comments {
+  padding-left: 20px;
+}
+.task-detail__comments li {
+  padding: 12px 0;
+  border-bottom: 1px solid #dce1e8;
+  overflow-wrap: anywhere;
+}
+.task-detail__comments p {
+  white-space: pre-wrap;
+}
