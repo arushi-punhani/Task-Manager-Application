@@ -125,4 +125,4 @@ Keep this list updated as you work, so it is not written from memory on the last
 
 ## How to run
 
-To be filled in by Arushi once the skeleton is pushed: install steps, environment variables (kept out of source control), database setup, and the commands to start the server and client.
+See [docs/HOW_TO_RUN.md](docs/HOW_TO_RUN.md) for database setup, environment variables, and commands to start and test the server and client.
