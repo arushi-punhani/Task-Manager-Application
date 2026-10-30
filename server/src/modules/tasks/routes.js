@@ -4,7 +4,7 @@ const express = require('express');
 const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
 const { createRequireTaskAccess } = require('../../middleware/taskAccess');
-const { validateTaskFields, toTask } = require('./validation');
+const { validateTaskFields, parseListQuery, toTask } = require('./validation');
 
 function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
   const router = express.Router();
@@ -30,25 +30,70 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
     }
   });
 
-  // Basic task list for the Tasks page: active tasks the user owns, is assigned, or can see via a shared list.
-  // Search, filter and sort (?q=&status=&priority=&tag=&due=&sort=) are TM-F-015 / TM-F-016 (Sprint 2).
+  // Task list for the Tasks page: active tasks the user owns, is assigned, or can see via a shared list.
+  // TM-F-015 search and filter: ?q= (title contains), status, priority, due (overdue|today|week|none|YYYY-MM-DD).
+  // TM-F-016 sort: ?sort=createdAt|dueDate|priority&order=asc|desc. Every value is passed as a SQL parameter.
   router.get('/', async (req, res, next) => {
+    const { errors, value } = parseListQuery(req.query);
+    if (errors.length) {
+      return res.status(400).json({ error: errors[0], details: errors });
+    }
+    const params = [req.user.id];
+    const where = [
+      't.deleted_at IS NULL',
+      `(t.owner_id = $1
+        OR t.assignee_id = $1
+        OR EXISTS (
+          SELECT 1 FROM list_shares ls
+          WHERE ls.list_id = t.list_id AND ls.user_id = $1
+        ))`,
+    ];
+    if (value.q) {
+      // Escape LIKE wildcards so "50%" searches for the text 50%, not "50 followed by anything".
+      params.push(`%${value.q.replace(/[\\%_]/g, '\\$&')}%`);
+      where.push(`t.title ILIKE $${params.length} ESCAPE '\\'`);
+    }
+    if (value.status) {
+      params.push(value.status);
+      where.push(`t.status = $${params.length}`);
+    }
+    if (value.priority) {
+      params.push(value.priority);
+      where.push(`t.priority = $${params.length}`);
+    }
+    if (value.tag) {
+      // Tag names are stored in lower case (TM-F-014), and parseListQuery lower-cases the filter to match.
+      params.push(value.tag);
+      where.push(`EXISTS (
+          SELECT 1 FROM task_tags tt JOIN tags g ON g.id = tt.tag_id
+          WHERE tt.task_id = t.id AND g.name = $${params.length}
+        )`);
+    }
+    if (value.due === 'overdue') where.push(`t.due_date < NOW() AND t.status <> 'COMPLETED'`);
+    else if (value.due === 'today') where.push('t.due_date::date = CURRENT_DATE');
+    else if (value.due === 'week') where.push('t.due_date::date BETWEEN CURRENT_DATE AND CURRENT_DATE + 7');
+    else if (value.due === 'none') where.push('t.due_date IS NULL');
+    else if (value.due) {
+      params.push(value.due);
+      where.push(`t.due_date::date = $${params.length}::date`);
+    }
+
+    // The direction word comes from a fixed list checked in parseListQuery, never straight from the request.
+    const dir = value.order === 'asc' ? 'ASC' : 'DESC';
+    const ORDER_BY = {
+      createdAt: `t.created_at ${dir}, t.id ${dir}`,
+      dueDate: `t.due_date ${dir} NULLS LAST, t.id DESC`,
+      priority: `CASE t.priority WHEN 'HIGH' THEN 3 WHEN 'MEDIUM' THEN 2 ELSE 1 END ${dir}, t.created_at DESC, t.id DESC`,
+    };
+
     try {
       const result = await db.query(
         `SELECT t.*
          FROM tasks t
-         WHERE t.deleted_at IS NULL
-           AND (
-             t.owner_id = $1
-             OR t.assignee_id = $1
-             OR EXISTS (
-               SELECT 1 FROM list_shares ls
-               WHERE ls.list_id = t.list_id AND ls.user_id = $1
-             )
-           )
-         ORDER BY t.created_at DESC, t.id DESC
+         WHERE ${where.join('\n           AND ')}
+         ORDER BY ${ORDER_BY[value.sort]}
          LIMIT 100`,
-        [req.user.id],
+        params,
       );
       return res.json({ tasks: result.rows.map(toTask) });
     } catch (error) {

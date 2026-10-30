@@ -23,7 +23,14 @@
 .task-due { font-size: 0.85rem; color: #57606a; }
 .task-description { margin: 6px 0 0; overflow-wrap: anywhere; }
 .task-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+/* Search, filter and sort bar (TM-F-015, TM-F-016) */
+.task-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 0 0 16px; }
+.task-filters label { display: grid; gap: 4px; font-weight: 600; font-size: 0.85rem; }
+.task-filters input, .task-filters select { font: inherit; padding: 6px 8px; border: 1px solid #8c959f; border-radius: 6px; box-sizing: border-box; }
+.task-filters .filter-search { flex: 1 1 200px; }
+.task-filters .filter-search input { width: 100%; }
 @media (max-width: 480px) {
+  .task-filters label, .task-filters select, .task-filters button { width: 100%; }
   .task-form-row { grid-template-columns: 1fr; }
   .task-actions { width: 100%; }
 }
