@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import './Tasks.css';
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
-const EMPTY_FORM = { title: '', description: '', dueDate: '', priority: 'MEDIUM' };
+const EMPTY_FORM = { title: '', description: '', dueDate: '', priority: 'MEDIUM', tags: '' };
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
 const EMPTY_FILTERS = { q: '', status: '', priority: '', due: '', tag: '', sort: 'createdAt:desc' };
 const DUE_OPTIONS = [['overdue', 'Overdue'], ['today', 'Due today'], ['week', 'Due in 7 days'], ['none', 'No due date']];
@@ -27,6 +27,11 @@ function buildQuery(filters) {
   params.set('sort', sort);
   params.set('order', order);
   return `?${params.toString()}`;
+}
+
+// "work, Home ,," -> ['work', 'Home']; the server lower-cases and removes duplicates (TM-F-014).
+function parseTags(text) {
+  return text.split(',').map((tag) => tag.trim()).filter(Boolean);
 }
 
 function formatDate(value) {
@@ -99,6 +104,7 @@ export default function Tasks() {
       description: form.description,
       dueDate: form.dueDate || null,
       priority: form.priority,
+      tags: parseTags(form.tags),
     };
     try {
       if (editingId) {
@@ -124,6 +130,7 @@ export default function Tasks() {
       description: task.description || '',
       dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
       priority: task.priority,
+      tags: (task.tags || []).join(', '),
     });
     setMessage('');
   }
@@ -178,6 +185,10 @@ export default function Tasks() {
             </select>
           </label>
         </div>
+        <label>
+          Tags (separate with commas, up to 10)
+          <input name="tags" value={form.tags} onChange={updateField} placeholder="work, urgent" />
+        </label>
         <div className="task-form-actions">
           <button type="submit" disabled={saving}>{editingId ? 'Save changes' : 'Add task'}</button>
           {editingId && <button type="button" className="secondary" onClick={resetForm}>Cancel</button>}
@@ -211,6 +222,10 @@ export default function Tasks() {
           </select>
         </label>
         <label>
+          Tag
+          <input name="tag" value={filters.tag} onChange={updateFilter} maxLength={50} placeholder="e.g. work" />
+        </label>
+        <label>
           Sort by
           <select name="sort" value={filters.sort} onChange={updateFilter}>
             {SORT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -242,6 +257,18 @@ export default function Tasks() {
                 <span className={`badge priority-${task.priority.toLowerCase()}`}>{task.priority}</span>
                 <span className="badge">{task.status.replace('_', ' ')}</span>
                 <span className="task-due">{formatDate(task.dueDate)}</span>
+                {task.tags && task.tags.length > 0 && (
+                  <ul className="tag-list" aria-label="Tags">
+                    {task.tags.map((tag) => (
+                      <li key={tag}>
+                        <button type="button" className="tag-chip" title={`Show only tasks tagged ${tag}`}
+                          onClick={() => setFilters({ ...filters, tag })}>
+                          #{tag}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {task.description && <p className="task-description">{task.description}</p>}
               </div>
               <div className="task-actions">

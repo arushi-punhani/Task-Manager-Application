@@ -29,6 +29,9 @@
 .task-filters input, .task-filters select { font: inherit; padding: 6px 8px; border: 1px solid #8c959f; border-radius: 6px; box-sizing: border-box; }
 .task-filters .filter-search { flex: 1 1 200px; }
 .task-filters .filter-search input { width: 100%; }
+/* Tags (TM-F-014) */
+.tag-list { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tasks-page button.tag-chip { padding: 2px 8px; font-size: 0.75rem; background: #ddf4ff; color: #0550ae; border-color: #b6e3ff; border-radius: 999px; }
 @media (max-width: 480px) {
   .task-filters label, .task-filters select, .task-filters button { width: 100%; }
   .task-form-row { grid-template-columns: 1fr; }

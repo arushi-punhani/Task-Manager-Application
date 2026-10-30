@@ -29,7 +29,7 @@ test('TC-Task-01: a signed-in user can create a task and gets it back (201)', ()
     assert.equal(db.calls.length, 1);
     assert.match(db.calls[0].sql, /INSERT INTO tasks/);
     // owner is the signed-in user (42), title is trimmed, date becomes an ISO timestamp, priority is upper-cased
-    assert.deepEqual(db.calls[0].params, [42, 'Write report', 'First draft', '2026-11-05T00:00:00.000Z', 'HIGH']);
+    assert.deepEqual(db.calls[0].params, [42, 'Write report', 'First draft', '2026-11-05T00:00:00.000Z', 'HIGH', []]);
   })();
 });
 
@@ -38,7 +38,7 @@ test('TC-Task-01: only a title is required; priority defaults to MEDIUM', () => 
   return withServer(mountWith(db), async (base) => {
     const res = await fetch(`${base}/api/v1/tasks`, json('POST', { title: 'Buy milk' }));
     assert.equal(res.status, 201);
-    assert.deepEqual(db.calls[0].params, [42, 'Buy milk', null, null, 'MEDIUM']);
+    assert.deepEqual(db.calls[0].params, [42, 'Buy milk', null, null, 'MEDIUM', []]);
   })();
 });
 
