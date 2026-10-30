@@ -49,6 +49,8 @@ export default function Tasks() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedTasks, setDeletedTasks] = useState([]);
   const latestRequest = useRef(0);
   const filtersActive = ['q', 'status', 'priority', 'due', 'tag'].some((key) => filters[key].trim() !== '');
 
@@ -81,6 +83,33 @@ export default function Tasks() {
     const timer = setTimeout(() => loadTasks(), 250);
     return () => clearTimeout(timer);
   }, [filters]);
+
+  // TM-NF-005: deleted tasks can be restored for 30 days.
+  async function loadDeleted() {
+    try {
+      const data = await api('/tasks/deleted');
+      setDeletedTasks(data.tasks);
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  async function toggleDeleted() {
+    const next = !showDeleted;
+    setShowDeleted(next);
+    if (next) await loadDeleted();
+  }
+
+  async function restoreTask(task) {
+    setMessage('');
+    try {
+      await api(`/tasks/${task.id}/restore`, { method: 'POST' });
+      setMessage(`Restored "${task.title}".`);
+      await Promise.all([loadTasks(), loadDeleted()]);
+    } catch (error) {
+      handleError(error);
+    }
+  }
 
   function updateFilter(event) {
     setFilters({ ...filters, [event.target.name]: event.target.value });
@@ -152,8 +181,9 @@ export default function Tasks() {
     try {
       await api(`/tasks/${task.id}`, { method: 'DELETE' });
       if (editingId === task.id) resetForm();
-      setMessage('Task deleted.');
+      setMessage('Task deleted. You can restore it from "Recently deleted" for 30 days.');
       await loadTasks();
+      if (showDeleted) await loadDeleted();
     } catch (error) {
       handleError(error);
     }
@@ -282,6 +312,31 @@ export default function Tasks() {
           ))}
         </ul>
       )}
+
+      <div className="deleted-section">
+        <button type="button" className="secondary" onClick={toggleDeleted} aria-expanded={showDeleted}>
+          {showDeleted ? 'Hide recently deleted' : 'Show recently deleted'}
+        </button>
+        {showDeleted && (
+          deletedTasks.length === 0 ? (
+            <p>No deleted tasks in the last 30 days.</p>
+          ) : (
+            <ul className="task-list">
+              {deletedTasks.map((task) => (
+                <li key={task.id} className="task-item task-done">
+                  <div className="task-main">
+                    <span className="task-title">{task.title}</span>
+                    <span className="task-due">Deleted {new Date(task.deletedAt).toLocaleDateString()}</span>
+                  </div>
+                  <div className="task-actions">
+                    <button type="button" onClick={() => restoreTask(task)}>Restore</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+      </div>
     </section>
   );
 }
