@@ -27,8 +27,13 @@ npm run dev                 # http://localhost:5173
 ```
 The client proxies `/api` to the server on port 4000.
 
-## Working before login exists
-In `server/.env` set `DEV_FAKE_USER_ID=1` (and `NODE_ENV=development`). The server then treats every request as user 1 (role USER; set `DEV_FAKE_USER_ROLE=ADMIN` to test admin endpoints). Insert a matching row into `users` first. **Remove this once real login is merged. Never set it in any shared or deployed environment.**
+## Demo data
+From the `server/` directory, run `npm run db:seed` to create the demo accounts and sample tasks. The accounts are `admin@taskmanager.local`, `arushi@taskmanager.local`, and `aryan@taskmanager.local`; all use the password `DemoPass123!`. Re-running the command updates these demo accounts and does not duplicate their sample tasks. Do not run it in production.
+
+## Optional development auth bypass
+To build other modules without logging in, set `DEV_FAKE_USER_ID=1` (and `NODE_ENV=development`) in `server/.env`. The server then treats every request as user 1 (role USER; set `DEV_FAKE_USER_ROLE=ADMIN` to test admin endpoints). Insert a matching row into `users` first. This bypasses authentication and must never be enabled in a shared or deployed environment.
+
+Normal authentication is available at `POST /api/v1/auth/register` and `POST /api/v1/auth/login`. The mock verification email link is printed in the server console. Send the returned JWT as `Authorization: Bearer <token>`; `POST /api/v1/auth/logout` revokes that session.
 
 ## Where code goes
 One folder per module in `server/src/modules/`: auth, tasks, collab, notif, report, admin. Each has a `routes.js` with every endpoint from the SAD as a stub that returns 501. Replace a stub with the real code for your story, and keep the story ID (for example TM-F-010) in your commit message and PR.
