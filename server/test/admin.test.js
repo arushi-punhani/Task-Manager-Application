@@ -37,7 +37,7 @@ function jsonResponse(rows) {
   return { rows };
 }
 
-test('admin user list returns public fields and bounded pagination', async () => {
+test('TC-Admin-01: admin user list returns public fields and bounded pagination', async () => {
   const calls = [];
   const db = {
     async query(sql, params) {
@@ -78,7 +78,7 @@ test('admin user list returns public fields and bounded pagination', async () =>
   });
 });
 
-test('admin user list rejects invalid pagination', async () => {
+test('TC-Admin-01: admin user list rejects invalid pagination', async () => {
   let queried = false;
   const db = { async query() { queried = true; return jsonResponse([]); } };
   await withServer(createAdminRouter({ db, authMiddleware: testAuth() }), async (base) => {
@@ -88,7 +88,7 @@ test('admin user list rejects invalid pagination', async () => {
   });
 });
 
-test('non-admin users receive 403 and cannot query the admin user list', async () => {
+test('TC-Admin-01: non-admin users receive 403 and cannot query the admin user list', async () => {
   let queried = false;
   const db = { async query() { queried = true; return jsonResponse([]); } };
   await withServer(createAdminRouter({ db, authMiddleware: testAuth('USER', 7) }), async (base) => {
@@ -98,7 +98,7 @@ test('non-admin users receive 403 and cannot query the admin user list', async (
   });
 });
 
-test('disabling a user updates status, revokes active sessions, and writes an audit entry', async () => {
+test('TC-Admin-02: disabling a user revokes sessions and writes an audit entry', async () => {
   let call;
   const db = {
     async query(sql, params) {
@@ -129,7 +129,7 @@ test('disabling a user updates status, revokes active sessions, and writes an au
   });
 });
 
-test('enabling a user writes a USER_ENABLED audit entry', async () => {
+test('TC-Admin-02: enabling a user writes a USER_ENABLED audit entry', async () => {
   let call;
   const db = {
     async query(sql, params) {
@@ -186,7 +186,7 @@ test('status update returns 404 when the target user does not exist', async () =
   });
 });
 
-test('deleting a user is audited and prevents deleting the current administrator', async () => {
+test('TC-Admin-02: deleting a user is audited and prevents deleting the current administrator', async () => {
   let call;
   const db = {
     async query(sql, params) {
