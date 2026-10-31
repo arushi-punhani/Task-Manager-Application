@@ -1,30 +1,17 @@
-import { Routes, Route, Link } from 'react-router-dom';
-import Placeholder from './pages/Placeholder.jsx';
+﻿import { Routes, Route, Link } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
+import TaskDetail from './pages/TaskDetail.jsx';
+import Tasks from './pages/Tasks.jsx';
+import Admin from './pages/Admin.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/register.jsx';
-import TaskDetail from './pages/TaskDetail.jsx';
 
 export default function App() {
   return (
-    <div
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        maxWidth: 960,
-        margin: '0 auto',
-        padding: 16,
-      }}
-    >
-      <nav
-        style={{
-          display: 'flex',
-          gap: 12,
-          flexWrap: 'wrap',
-          marginBottom: 16,
-        }}
-      >
+    <div className="app-shell">
+      <nav className="app-nav">
         <Link to="/">Tasks</Link>
-        <Link to="/tasks/1">Task Detail</Link>
+        <Link to="/tasks/1">Task detail demo</Link>
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/admin">Admin</Link>
         <Link to="/login">Login</Link>
@@ -32,26 +19,12 @@ export default function App() {
       </nav>
 
       <Routes>
-        <Route
-          path="/"
-          element={
-            <Placeholder title="Task list (Aryan: TM-F-010 to TM-F-013)" />
-          }
-        />
-
-        {/* Your Task Detail page */}
+        <Route path="/" element={<Tasks />} />
         <Route path="/tasks/:id" element={<TaskDetail />} />
-
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/admin" element={<Admin />} />
 
-        <Route
-          path="/admin"
-          element={
-            <Placeholder title="Admin (Arnav: TM-F-050, TM-F-051)" />
-          }
-        />
-
-        {/* Your Login and Register pages */}
+        {/* Arya's Login and Register UI */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

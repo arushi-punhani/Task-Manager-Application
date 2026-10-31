@@ -116,13 +116,18 @@ Rules:
 
 ## Deviations from submitted documents
 
-Keep this list updated as you work, so it is not written from memory on the last day. Known items so far:
+The full list, with the status of all 31 SRS requirements, is in [docs/DEVIATIONS.md](docs/DEVIATIONS.md). In short:
 
-- Sprint 1 (19-23 Oct) was not run as planned. Work was compressed into 27-30 Oct.
-- Real email sending is replaced by a mock or sandbox service.
-- Items that cannot be built or verified in this time (TLS setup, load testing, uptime and scale targets: TM-SR-001, TM-NF-001, TM-NF-002, TM-NF-003) are documented rather than implemented.
-- Add any feature cut from the backlog here, with the reason.
+- Sprint 1 (19-23 Oct) was not run as planned. Work was compressed into 27-30 Oct and overlapped with Sprint 2.
+- Real email sending is replaced by a mock service (the verification link is printed in the server console).
+- Features not completed: account lockout (TM-F-003), password reset (TM-F-004), list sharing (TM-F-022), reminders and notifications (TM-F-030, TM-F-031) and CSV export (TM-F-041). The login, register and admin pages in the UI are still placeholders.
+- Items that need a deployed system (TLS, uptime, load and response-time targets: TM-SR-001, TM-NF-001, TM-NF-002, TM-NF-003) are documented rather than measured.
+
+## Test results
+
+- Sprint 1 task features: [docs/TEST_RESULTS_TASKS.md](docs/TEST_RESULTS_TASKS.md)
+- Sprint 2 task features (tags, search, filter, sort, restore and purge): [docs/TEST_RESULTS_TASKS_SPRINT2.md](docs/TEST_RESULTS_TASKS_SPRINT2.md)
 
 ## How to run
 
-To be filled in by Arushi once the skeleton is pushed: install steps, environment variables (kept out of source control), database setup, and the commands to start the server and client.
+See [docs/HOW_TO_RUN.md](docs/HOW_TO_RUN.md) for database setup, environment variables, and commands to start and test the server and client.
