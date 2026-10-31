@@ -23,7 +23,7 @@ const withDashboardServer = (db, fn) => async () => {
   }
 };
 
-test('dashboard summary returns numeric status and overdue counts for the signed-in user', withDashboardServer({
+test('TC-Report-01: dashboard summary returns status and overdue counts for the signed-in user', withDashboardServer({
   async query(sql, params) {
     assert.deepEqual(params, [42]);
     assert.match(sql, /t\.status = 'PENDING'/);
@@ -49,7 +49,7 @@ test('dashboard summary returns numeric status and overdue counts for the signed
   });
 }));
 
-test('dashboard summary returns zero counts when the user has no visible tasks', withDashboardServer({
+test('TC-Report-01: dashboard summary returns zero counts when the user has no visible tasks', withDashboardServer({
   async query() {
     // PostgreSQL aggregate queries without GROUP BY return one row of zero counts on empty input.
     return { rows: [{ pending: 0, inProgress: 0, completed: 0, overdue: 0 }] };

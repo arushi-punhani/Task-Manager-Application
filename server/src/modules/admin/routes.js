@@ -3,7 +3,6 @@
 // Successful account changes are recorded in audit_log (TM-F-051).
 const express = require('express');
 const pool = require('../../config/db');
-const notImplemented = require('../../middleware/notImplemented');
 const { authenticate, requireAdmin } = require('../../middleware/auth');
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -24,6 +23,21 @@ const LIST_USERS_SQL = `
 `;
 
 const COUNT_USERS_SQL = 'SELECT COUNT(*)::int AS total FROM users';
+const LIST_AUDIT_LOGS_SQL = `
+  SELECT
+    audit.id,
+    audit.actor_id AS "actorId",
+    actor.email AS "actorEmail",
+    audit.action,
+    audit.target_id AS "targetId",
+    audit.timestamp,
+    audit.outcome
+  FROM audit_log AS audit
+  LEFT JOIN users AS actor ON actor.id = audit.actor_id
+  ORDER BY audit.timestamp DESC, audit.id DESC
+  LIMIT $1 OFFSET $2
+`;
+const COUNT_AUDIT_LOGS_SQL = 'SELECT COUNT(*)::int AS total FROM audit_log';
 
 // A single SQL statement keeps the status change, session revocation, and audit
 // entry atomic. Revoking sessions makes a disabled account's existing JWTs stop
@@ -104,6 +118,17 @@ function toPublicUser(row) {
   };
 }
 
+function toPublicAuditLog(row) {
+  return {
+    id: Number(row.id),
+    actorId: row.actorId == null ? null : Number(row.actorId),
+    actorEmail: row.actorEmail ?? null,
+    action: row.action,
+    targetId: row.targetId == null ? null : Number(row.targetId),
+    timestamp: row.timestamp ?? row.createdAt ?? row.created_at,
+    outcome: row.outcome,
+  };
+}
 function createAdminRouter({
   db = pool,
   authMiddleware = authenticate,
@@ -191,8 +216,34 @@ function createAdminRouter({
     }
   });
 
-  // Audit-log retrieval is TM-F-051 and remains assigned to the separate issue.
-  router.get('/audit-logs', notImplemented('TM-F-051'));
+  // GET /api/v1/admin/audit-logs?limit=50&offset=0
+  // Returns the administrator identity, action, target, timestamp and outcome.
+  router.get('/audit-logs', async (req, res, next) => {
+    const limit = parsePageNumber(req.query.limit, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const offset = parsePageNumber(req.query.offset, 0, 1_000_000_000);
+    if (limit === null || limit < 1 || offset === null) {
+      return res.status(400).json({
+        error: `limit must be between 1 and ${MAX_PAGE_SIZE}; offset must be a non-negative integer`,
+      });
+    }
+
+    try {
+      const [logsResult, countResult] = await Promise.all([
+        db.query(LIST_AUDIT_LOGS_SQL, [limit, offset]),
+        db.query(COUNT_AUDIT_LOGS_SQL),
+      ]);
+      return res.json({
+        logs: logsResult.rows.map(toPublicAuditLog),
+        pagination: {
+          limit,
+          offset,
+          total: Number(countResult.rows[0]?.total) || 0,
+        },
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   return router;
 }
@@ -203,5 +254,7 @@ router.LIST_USERS_SQL = LIST_USERS_SQL;
 router.COUNT_USERS_SQL = COUNT_USERS_SQL;
 router.UPDATE_USER_STATUS_SQL = UPDATE_USER_STATUS_SQL;
 router.DELETE_USER_SQL = DELETE_USER_SQL;
+router.LIST_AUDIT_LOGS_SQL = LIST_AUDIT_LOGS_SQL;
+router.COUNT_AUDIT_LOGS_SQL = COUNT_AUDIT_LOGS_SQL;
 
 module.exports = router;
