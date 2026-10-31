@@ -1,16 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import './Tasks.css';
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 const EMPTY_FORM = { title: '', description: '', dueDate: '', priority: 'MEDIUM' };
+const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
+const EMPTY_FILTERS = { q: '', status: '', priority: '', due: '', tag: '', sort: 'createdAt:desc' };
+const DUE_OPTIONS = [['overdue', 'Overdue'], ['today', 'Due today'], ['week', 'Due in 7 days'], ['none', 'No due date']];
+// "field:direction" pairs sent to the server as ?sort=&order= (TM-F-016).
+const SORT_OPTIONS = [
+  ['createdAt:desc', 'Newest first'],
+  ['createdAt:asc', 'Oldest first'],
+  ['dueDate:asc', 'Due date (soonest first)'],
+  ['dueDate:desc', 'Due date (latest first)'],
+  ['priority:desc', 'Priority (high first)'],
+  ['priority:asc', 'Priority (low first)'],
+];
+
+function buildQuery(filters) {
+  const params = new URLSearchParams();
+  for (const key of ['q', 'status', 'priority', 'due', 'tag']) {
+    if (filters[key].trim()) params.set(key, filters[key].trim());
+  }
+  const [sort, order] = filters.sort.split(':');
+  params.set('sort', sort);
+  params.set('order', order);
+  return `?${params.toString()}`;
+}
 
 function formatDate(value) {
   return value ? new Date(value).toLocaleDateString() : 'No due date';
 }
 
-// TM-F-010 create, TM-F-011 edit, TM-F-012 delete (with confirmation), TM-F-013 complete or reopen.
+// TM-F-010 create, TM-F-011 edit, TM-F-012 delete (with confirmation), TM-F-013 complete or reopen,
+// TM-F-015 search and filter, TM-F-016 sort (the list refreshes in place, with no page reload).
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +43,9 @@ export default function Tasks() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const latestRequest = useRef(0);
+  const filtersActive = ['q', 'status', 'priority', 'due', 'tag'].some((key) => filters[key].trim() !== '');
 
   function handleError(error) {
     if (error.status === 401) {
@@ -29,19 +56,30 @@ export default function Tasks() {
     }
   }
 
-  async function loadTasks() {
+  async function loadTasks(current = filters) {
+    // Typing quickly sends several requests; only the newest answer may update the screen.
+    const requestId = ++latestRequest.current;
     try {
-      const data = await api('/tasks');
+      const data = await api(`/tasks${buildQuery(current)}`);
+      if (requestId !== latestRequest.current) return;
       setTasks(data.tasks);
       setNeedsLogin(false);
     } catch (error) {
-      handleError(error);
+      if (requestId === latestRequest.current) handleError(error);
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }
 
-  useEffect(() => { loadTasks(); }, []);
+  // Reload when a filter or the sort order changes (a short pause while typing avoids a request per key press).
+  useEffect(() => {
+    const timer = setTimeout(() => loadTasks(), 250);
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  function updateFilter(event) {
+    setFilters({ ...filters, [event.target.name]: event.target.value });
+  }
 
   function updateField(event) {
     setForm({ ...form, [event.target.name]: event.target.value });
@@ -146,6 +184,45 @@ export default function Tasks() {
         </div>
       </form>
 
+      <form className="task-filters" role="search" aria-label="Search, filter and sort tasks" onSubmit={(e) => e.preventDefault()}>
+        <label className="filter-search">
+          Search title
+          <input type="search" name="q" value={filters.q} onChange={updateFilter} maxLength={100} placeholder="Search tasks" />
+        </label>
+        <label>
+          Status
+          <select name="status" value={filters.status} onChange={updateFilter}>
+            <option value="">All</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+          </select>
+        </label>
+        <label>
+          Priority
+          <select name="priority" value={filters.priority} onChange={updateFilter}>
+            <option value="">All</option>
+            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </label>
+        <label>
+          Due date
+          <select name="due" value={filters.due} onChange={updateFilter}>
+            <option value="">Any</option>
+            {DUE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        <label>
+          Sort by
+          <select name="sort" value={filters.sort} onChange={updateFilter}>
+            {SORT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </select>
+        </label>
+        {filtersActive && (
+          <button type="button" className="secondary" onClick={() => setFilters({ ...EMPTY_FILTERS, sort: filters.sort })}>
+            Clear filters
+          </button>
+        )}
+      </form>
+
       {message && (
         <p className="task-message" role="status">
           {message} {needsLogin && <Link to="/login">Go to login</Link>}
@@ -155,7 +232,7 @@ export default function Tasks() {
       {loading ? (
         <p>Loading tasks...</p>
       ) : tasks.length === 0 && !needsLogin ? (
-        <p>No tasks yet. Add your first one above.</p>
+        <p>{filtersActive ? 'No tasks match your filters.' : 'No tasks yet. Add your first one above.'}</p>
       ) : (
         <ul className="task-list">
           {tasks.map((task) => (

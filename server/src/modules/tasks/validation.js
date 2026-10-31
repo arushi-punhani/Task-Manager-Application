@@ -79,4 +79,79 @@ function toTask(row) {
   };
 }
 
-module.exports = { validateTaskFields, toTask, PRIORITIES, STATUSES };
+// Query string for GET /tasks (TM-F-015 search and filter, TM-F-016 sort).
+//   q=<text in title>  status=  priority=  tag=  due=overdue|today|week|none|YYYY-MM-DD
+//   sort=createdAt|dueDate|priority  order=asc|desc
+const SORT_FIELDS = ['createdAt', 'dueDate', 'priority'];
+const DUE_FILTERS = ['overdue', 'today', 'week', 'none'];
+// Newest first, earliest due date first and HIGH priority first unless the caller says otherwise.
+const DEFAULT_ORDER = { createdAt: 'desc', dueDate: 'asc', priority: 'desc' };
+
+function validDay(text) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const parsed = new Date(`${text}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === text;
+}
+
+function parseListQuery(query) {
+  const input = query && typeof query === 'object' ? query : {};
+  const errors = [];
+  const value = {};
+  // ?q=a&q=b arrives as an array; only the first value is used.
+  const text = (key) => {
+    const raw = Array.isArray(input[key]) ? input[key][0] : input[key];
+    if (raw === undefined) return undefined;
+    if (typeof raw !== 'string') { errors.push(`${key} must be text`); return undefined; }
+    const trimmed = raw.trim();
+    return trimmed === '' ? undefined : trimmed;
+  };
+
+  const q = text('q');
+  if (q !== undefined) {
+    if (q.length > 100) errors.push('q must be 100 characters or fewer');
+    else value.q = q;
+  }
+
+  const status = text('status');
+  if (status !== undefined) {
+    if (!STATUSES.includes(status.toUpperCase())) errors.push('status must be PENDING, IN_PROGRESS or COMPLETED');
+    else value.status = status.toUpperCase();
+  }
+
+  const priority = text('priority');
+  if (priority !== undefined) {
+    if (!PRIORITIES.includes(priority.toUpperCase())) errors.push('priority must be LOW, MEDIUM or HIGH');
+    else value.priority = priority.toUpperCase();
+  }
+
+  const tag = text('tag');
+  if (tag !== undefined) {
+    if (tag.length > 50) errors.push('tag must be 50 characters or fewer');
+    else value.tag = tag.toLowerCase();
+  }
+
+  const due = text('due');
+  if (due !== undefined) {
+    if (DUE_FILTERS.includes(due.toLowerCase())) value.due = due.toLowerCase();
+    else if (validDay(due)) value.due = due;
+    else errors.push('due must be overdue, today, week, none or a date (YYYY-MM-DD)');
+  }
+
+  const sort = text('sort');
+  if (sort !== undefined) {
+    if (!SORT_FIELDS.includes(sort)) errors.push('sort must be createdAt, dueDate or priority');
+    else value.sort = sort;
+  }
+  value.sort = value.sort || 'createdAt';
+
+  const order = text('order');
+  if (order !== undefined) {
+    if (!['asc', 'desc'].includes(order.toLowerCase())) errors.push('order must be asc or desc');
+    else value.order = order.toLowerCase();
+  }
+  value.order = value.order || DEFAULT_ORDER[value.sort];
+
+  return { errors, value };
+}
+
+module.exports = { validateTaskFields, parseListQuery, toTask, PRIORITIES, STATUSES, SORT_FIELDS, DUE_FILTERS };
