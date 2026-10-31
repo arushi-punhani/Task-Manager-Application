@@ -1,9 +1,10 @@
 ﻿import { Routes, Route, Link } from 'react-router-dom';
-import Placeholder from './pages/Placeholder.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import TaskDetail from './pages/TaskDetail.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Admin from './pages/Admin.jsx';
+import Login from './pages/Login.jsx';
+import Register from './pages/register.jsx';
 
 export default function App() {
   return (
@@ -22,14 +23,10 @@ export default function App() {
         <Route path="/tasks/:id" element={<TaskDetail />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<Admin />} />
-        <Route
-          path="/login"
-          element={<Placeholder title="Login (Arya builds the page; Arushi builds the API)" />}
-        />
-        <Route
-          path="/register"
-          element={<Placeholder title="Register (Arya builds the page; Arushi builds the API)" />}
-        />
+
+        {/* Arya's Login and Register UI */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
       </Routes>
     </div>
   );
