@@ -3,6 +3,26 @@
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH'];
 const STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED'];
 
+// TM-F-014: a task has up to 10 free-text tags (categories are just tags). Tags are stored in lower case, so
+// "Work" and "work" are the same tag. Returns { error } or { tags: [...] } with duplicates removed.
+const MAX_TAGS = 10;
+const MAX_TAG_LENGTH = 50;
+
+function normalizeTags(input) {
+  if (input === null) return { tags: [] };
+  if (!Array.isArray(input)) return { error: 'tags must be a list of text values' };
+  const tags = [];
+  for (const item of input) {
+    if (typeof item !== 'string') return { error: 'tags must be a list of text values' };
+    const name = item.trim().toLowerCase();
+    if (name === '') return { error: 'a tag cannot be empty' };
+    if (name.length > MAX_TAG_LENGTH) return { error: `a tag must be ${MAX_TAG_LENGTH} characters or fewer` };
+    if (!tags.includes(name)) tags.push(name);
+  }
+  if (tags.length > MAX_TAGS) return { error: `a task can have at most ${MAX_TAGS} tags` };
+  return { tags };
+}
+
 function validateTaskFields(body, { requireTitle = false, allowStatus = false } = {}) {
   const input = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
   const errors = [];
@@ -50,6 +70,12 @@ function validateTaskFields(body, { requireTitle = false, allowStatus = false } 
     }
   }
 
+  if (input.tags !== undefined) {
+    const result = normalizeTags(input.tags);
+    if (result.error) errors.push(result.error);
+    else value.tags = result.tags;
+  }
+
   if (allowStatus && input.status !== undefined) {
     const status = typeof input.status === 'string' ? input.status.toUpperCase() : '';
     if (!STATUSES.includes(status)) {
@@ -74,7 +100,7 @@ function toTask(row) {
     completedAt: row.completed_at,
     ownerId: row.owner_id,
     assigneeId: row.assignee_id,
-    tags: [], // categories and tags arrive with TM-F-014 (Sprint 2)
+    tags: Array.isArray(row.tags) ? row.tags : [],
     createdAt: row.created_at,
   };
 }
@@ -154,4 +180,4 @@ function parseListQuery(query) {
   return { errors, value };
 }
 
-module.exports = { validateTaskFields, parseListQuery, toTask, PRIORITIES, STATUSES, SORT_FIELDS, DUE_FILTERS };
+module.exports = { validateTaskFields, normalizeTags, parseListQuery, toTask, PRIORITIES, STATUSES, SORT_FIELDS, DUE_FILTERS };

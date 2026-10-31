@@ -6,6 +6,12 @@ const { authenticate } = require('../../middleware/auth');
 const { createRequireTaskAccess } = require('../../middleware/taskAccess');
 const { validateTaskFields, parseListQuery, toTask } = require('./validation');
 
+// Tag names of a task as one text[] column. `alias` is the task table (or CTE) name in the surrounding query.
+const tagsOf = (alias) => `COALESCE(
+    (SELECT array_agg(g.name ORDER BY g.name) FROM task_tags tt JOIN tags g ON g.id = tt.tag_id WHERE tt.task_id = ${alias}.id),
+    '{}'
+  )::text[]`;
+
 function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
   const router = express.Router();
   const requireTaskAccess = createRequireTaskAccess({ db });
@@ -18,11 +24,23 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
       return res.status(400).json({ error: errors[0], details: errors });
     }
     try {
+      // One statement, so the task and its tags are saved together or not at all. Tags belong to the task owner.
       const result = await db.query(
-        `INSERT INTO tasks (owner_id, title, description, due_date, priority)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [req.user.id, value.title, value.description ?? null, value.dueDate ?? null, value.priority ?? 'MEDIUM'],
+        `WITH new_task AS (
+           INSERT INTO tasks (owner_id, title, description, due_date, priority)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING *
+         ), new_tags AS (
+           INSERT INTO tags (owner_id, name)
+           SELECT $1, n FROM unnest($6::text[]) AS n
+           ON CONFLICT (owner_id, name) DO UPDATE SET name = EXCLUDED.name
+           RETURNING id
+         ), linked AS (
+           INSERT INTO task_tags (task_id, tag_id)
+           SELECT new_task.id, new_tags.id FROM new_task, new_tags
+         )
+         SELECT new_task.*, $6::text[] AS tags FROM new_task`,
+        [req.user.id, value.title, value.description ?? null, value.dueDate ?? null, value.priority ?? 'MEDIUM', value.tags ?? []],
       );
       return res.status(201).json(toTask(result.rows[0]));
     } catch (error) {
@@ -88,7 +106,7 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
 
     try {
       const result = await db.query(
-        `SELECT t.*
+        `SELECT t.*, ${tagsOf('t')} AS tags
          FROM tasks t
          WHERE ${where.join('\n           AND ')}
          ORDER BY ${ORDER_BY[value.sort]}
@@ -114,8 +132,9 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
     if (errors.length) {
       return res.status(400).json({ error: errors[0], details: errors });
     }
-    const fields = Object.keys(value);
-    if (fields.length === 0) {
+    const { tags, ...columns } = value; // tags are stored in their own tables, not in a tasks column
+    const fields = Object.keys(columns);
+    if (fields.length === 0 && tags === undefined) {
       return res.status(400).json({ error: 'Provide at least one field to update' });
     }
 
@@ -123,7 +142,7 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
     const params = [];
     let statusParam = null;
     const sets = fields.map((field) => {
-      params.push(value[field]);
+      params.push(columns[field]);
       if (field === 'status') {
         statusParam = params.length;
         // Cast to text: the same parameter is used again in the CASE below, and PostgreSQL rejects
@@ -137,15 +156,40 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
       // Keep the original completion time if it stays COMPLETED; clear it when the task is reopened.
       sets.push(`completed_at = CASE WHEN $${statusParam}::text = 'COMPLETED' THEN COALESCE(completed_at, NOW()) ELSE NULL END`);
     }
+    if (sets.length === 0) sets.push('title = title'); // tags-only edit: UPDATE needs one SET item
     params.push(req.task.id);
+    const idParam = params.length;
+
+    // Without tags: one UPDATE. With tags (TM-F-014): one statement that also replaces the task's tag set,
+    // so the edit and its tags are saved together or not at all.
+    let sql = `UPDATE tasks SET ${sets.join(', ')}
+         WHERE id = $${idParam} AND deleted_at IS NULL
+         RETURNING *, ${tagsOf('tasks')} AS tags`;
+    if (tags !== undefined) {
+      params.push(tags);
+      const tagsParam = params.length;
+      sql = `WITH upd AS (
+           UPDATE tasks SET ${sets.join(', ')}
+           WHERE id = $${idParam} AND deleted_at IS NULL
+           RETURNING *
+         ), ensured AS (
+           INSERT INTO tags (owner_id, name)
+           SELECT upd.owner_id, n FROM upd, unnest($${tagsParam}::text[]) AS n
+           ON CONFLICT (owner_id, name) DO UPDATE SET name = EXCLUDED.name
+           RETURNING id
+         ), removed AS (
+           DELETE FROM task_tags
+           WHERE task_id IN (SELECT id FROM upd) AND tag_id NOT IN (SELECT id FROM ensured)
+         ), added AS (
+           INSERT INTO task_tags (task_id, tag_id)
+           SELECT upd.id, ensured.id FROM upd, ensured
+           ON CONFLICT DO NOTHING
+         )
+         SELECT upd.*, $${tagsParam}::text[] AS tags FROM upd`;
+    }
 
     try {
-      const result = await db.query(
-        `UPDATE tasks SET ${sets.join(', ')}
-         WHERE id = $${params.length} AND deleted_at IS NULL
-         RETURNING *`,
-        params,
-      );
+      const result = await db.query(sql, params);
       if (!result.rows[0]) return res.status(404).json({ error: 'Task not found' });
       return res.json(toTask(result.rows[0]));
     } catch (error) {
@@ -179,7 +223,7 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
         `UPDATE tasks
          SET status = 'COMPLETED', completed_at = COALESCE(completed_at, NOW())
          WHERE id = $1 AND deleted_at IS NULL
-         RETURNING *`,
+         RETURNING *, ${tagsOf('tasks')} AS tags`,
         [req.task.id],
       );
       if (!result.rows[0]) return res.status(404).json({ error: 'Task not found' });
@@ -199,7 +243,7 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
         `UPDATE tasks
          SET status = 'PENDING', completed_at = NULL
          WHERE id = $1 AND deleted_at IS NULL
-         RETURNING *`,
+         RETURNING *, ${tagsOf('tasks')} AS tags`,
         [req.task.id],
       );
       if (!result.rows[0]) return res.status(404).json({ error: 'Task not found' });
