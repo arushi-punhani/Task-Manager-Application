@@ -4,6 +4,7 @@ const express = require('express');
 const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
 const { createRequireTaskAccess } = require('../../middleware/taskAccess');
+const { RETENTION_DAYS } = require('../../jobs/purgeDeletedTasks');
 const { validateTaskFields, parseListQuery, toTask } = require('./validation');
 
 // Tag names of a task as one text[] column. `alias` is the task table (or CTE) name in the surrounding query.
@@ -118,6 +119,51 @@ function createTasksRouter({ db = pool, authMiddleware = authenticate } = {}) {
       return next(error);
     }
   });
+  // TM-NF-005: the signed-in user's own deleted tasks that can still be restored (deleted less than 30 days ago).
+  router.get('/deleted', async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `SELECT t.*, ${tagsOf('t')} AS tags
+         FROM tasks t
+         WHERE t.owner_id = $1 AND t.deleted_at IS NOT NULL AND t.deleted_at > NOW() - make_interval(days => $2)
+         ORDER BY t.deleted_at DESC, t.id DESC
+         LIMIT 100`,
+        [req.user.id, RETENTION_DAYS],
+      );
+      return res.json({ tasks: result.rows.map((row) => ({ ...toTask(row), deletedAt: row.deleted_at })) });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  // TM-NF-005: restore a deleted task within 30 days. Only the owner can, and the restore is logged.
+  // Someone else's task, a task that was never deleted and a task past the 30 days all answer 404.
+  router.post('/:id/restore', async (req, res, next) => {
+    const taskId = Number(req.params.id);
+    if (!Number.isInteger(taskId) || taskId < 1) {
+      return res.status(400).json({ error: 'Invalid task ID' });
+    }
+    try {
+      const result = await db.query(
+        `WITH restored AS (
+           UPDATE tasks SET deleted_at = NULL
+           WHERE id = $1 AND owner_id = $2 AND deleted_at IS NOT NULL
+             AND deleted_at > NOW() - make_interval(days => $3)
+           RETURNING *
+         ), logged AS (
+           INSERT INTO audit_log (actor_id, action, target_id)
+           SELECT $2, 'TASK_RESTORED', id FROM restored
+         )
+         SELECT restored.*, ${tagsOf('restored')} AS tags FROM restored`,
+        [taskId, req.user.id, RETENTION_DAYS],
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'No restorable task with that ID' });
+      return res.json(toTask(result.rows[0]));
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   // TM-F-011: edit title, description, due date, priority or status (owner, or a list share with EDIT).
   const EDITABLE_COLUMNS = {
     title: 'title',
