@@ -11,6 +11,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 | P3 | The repo skeleton (`client/`, `server/`, `docs/`, CI workflow) was pushed directly to `main` by the repo owner. | The branch and PR workflow could not start until the skeleton existed. | Every feature after the skeleton went through a pull request. |
 | P4 | Some Sprint 1 task PRs (#53-#59) were raised as a stack of branches in one evening and their base was changed to `main` before merging. | The task stories build on each other (create, access control, edit, complete, delete, UI, tests). | History is the same as separate PRs; each one links its issue. |
 | P5 | AI assistance (Claude) was used to write parts of the code, tests and documents, as the assignment allows (Sprint 1 item e). Commits made with it carry a `Co-Authored-By` line. | Time pressure. | Each author reviewed, ran and tested the code and can explain it. Tests were also run against a real PostgreSQL database and in a browser. |
+| P6 | The Sprint 1 demo video (`docs/demo/sprint1-video.mp4`) was committed directly to `main` by the Dev Lead instead of through a pull request. | A mistake when uploading the file: it was committed on `main` rather than on a branch. | The video is in the repo, and card #43 was closed manually. |
 
 ## 2. Requirement status (all 31 SRS requirements)
 
