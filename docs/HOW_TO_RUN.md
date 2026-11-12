@@ -35,6 +35,8 @@ To build other modules without logging in, set `DEV_FAKE_USER_ID=1` (and `NODE_E
 
 Normal authentication is available at `POST /api/v1/auth/register` and `POST /api/v1/auth/login`. The mock verification email link is printed in the server console. Send the returned JWT as `Authorization: Bearer <token>`; `POST /api/v1/auth/logout` revokes that session.
 
+Production health probes and restart-on-failure guidance are in [OPERATIONS.md](OPERATIONS.md).
+
 ## Where code goes
 One folder per module in `server/src/modules/`: auth, tasks, collab, notif, report, admin. Each has a `routes.js` with every endpoint from the SAD as a stub that returns 501. Replace a stub with the real code for your story, and keep the story ID (for example TM-F-010) in your commit message and PR.
 
