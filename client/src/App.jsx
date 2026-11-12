@@ -1,4 +1,4 @@
-﻿import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import Dashboard from './pages/Dashboard.jsx';
 import TaskDetail from './pages/TaskDetail.jsx';
 import Tasks from './pages/Tasks.jsx';
@@ -9,7 +9,8 @@ import Register from './pages/register.jsx';
 export default function App() {
   return (
     <div className="app-shell">
-      <nav className="app-nav">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <nav className="app-nav" aria-label="Primary navigation">
         <Link to="/">Tasks</Link>
         <Link to="/tasks/1">Task detail demo</Link>
         <Link to="/dashboard">Dashboard</Link>
@@ -18,16 +19,18 @@ export default function App() {
         <Link to="/register">Register</Link>
       </nav>
 
-      <Routes>
-        <Route path="/" element={<Tasks />} />
-        <Route path="/tasks/:id" element={<TaskDetail />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin" element={<Admin />} />
+      <main id="main-content" className="app-content" tabIndex={-1}>
+        <Routes>
+          <Route path="/" element={<Tasks />} />
+          <Route path="/tasks/:id" element={<TaskDetail />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin" element={<Admin />} />
 
-        {/* Arya's Login and Register UI */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
+          {/* Arya's Login and Register UI */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Routes>
+      </main>
     </div>
   );
 }
