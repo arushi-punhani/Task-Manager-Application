@@ -22,7 +22,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 | TM-F-001 | Register with email and password | Partial | API and tests done (Arushi). Verification email is a mock (see D1). The register page in the UI is still a placeholder. |
 | TM-F-002 | Login with session token | Partial | API, JWT and session table done and tested. The login page in the UI is still a placeholder. |
 | TM-F-003 | Lock account after 5 failed logins | Not built | Planned for Sprint 2, not completed. |
-| TM-F-004 | Password reset by time-limited link | Not built | The two endpoints exist and return 501. |
+| TM-F-004 | Password reset by time-limited link | Done | Reset tokens are hashed in the database, expire after 30 minutes, and are consumed once. The reset email is mocked and printed to the server console (see D1); no reset page or production email provider is included. |
 | TM-F-010 | Create task | Done | Aryan. TC-Task-01. |
 | TM-F-011 | Edit task | Done | Aryan. TC-Task-02. |
 | TM-F-012 | Delete task (soft delete, confirmation) | Done | Aryan. TC-Task-03. |
@@ -55,7 +55,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 
 | # | Document says | What we built | Reason |
 |---|---|---|---|
-| D1 | Verification and notification emails go through an external email service (SRS TM-F-001, SAD notification service). | A mock service. The verification link is printed in the server console and nothing is sent. | No real email provider in this version, as stated in the README from the start. |
+| D1 | Verification, password reset and notification emails go through an external email service (SRS TM-F-001, TM-F-004, SAD notification service). | A mock service. Verification and password reset links are printed in the server console and nothing is sent. | No real email provider in this version, as stated in the README from the start. |
 | D2 | Passwords hashed with bcrypt or Argon2 (TM-SR-002). | `bcryptjs` (a pure JavaScript bcrypt). | It installs on every machine without native build tools. The algorithm is still salted bcrypt. |
 | D3 | Errors use one JSON format `{status, code, message, requestId}` (SAD 4.4). | Errors return `{ "error": "message" }`, and validation errors add a `details` list. HTTP status codes follow the SAD (400, 401, 403, 404, 409). | Simpler for the client. No request IDs or error codes yet. |
 | D4 | Tasks are organised by "categories or custom tags" (TM-F-014). | One mechanism: free-text tags (up to 10 per task, stored in lower case). A category is just a tag. | The acceptance criterion only needs filtering by a category or tag. |

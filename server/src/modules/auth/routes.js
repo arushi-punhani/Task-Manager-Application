@@ -5,12 +5,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
-const { sendVerificationEmail } = require('./mockEmail');
+const { sendVerificationEmail, sendPasswordResetEmail } = require('./mockEmail');
 
 function createAuthRouter({
 	db = pool,
 	authMiddleware = authenticate,
 	mailer = sendVerificationEmail,
+	resetMailer = sendPasswordResetEmail,
 	jwtSecret = () => process.env.JWT_SECRET,
 	jwtExpiresIn = () => process.env.JWT_EXPIRES_IN || '1h',
 } = {}) {
@@ -98,7 +99,6 @@ function createAuthRouter({
 			}
 			if (user.status !== 'ACTIVE') return res.status(403).json({ error: 'Account is disabled' });
 			if (!jwtSecret()) return res.status(500).json({ error: 'Authentication is not configured' });
-
 			const tokenId = crypto.randomUUID();
 			const token = jwt.sign({ role: user.role }, jwtSecret(), {
 				subject: String(user.id),
@@ -128,8 +128,68 @@ function createAuthRouter({
 		}
 	});
 
-	router.post('/password-reset/request', (req, res) => res.status(501).json({ error: 'TM-F-004 is planned for Sprint 2' }));
-	router.post('/password-reset/confirm', (req, res) => res.status(501).json({ error: 'TM-F-004 is planned for Sprint 2' }));
+	router.post('/password-reset/request', async (req, res, next) => {
+		const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+		const genericResponse = { message: 'If an account exists for that email, a password reset link has been sent.' };
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json(genericResponse);
+
+		try {
+			const result = await db.query('SELECT id, email FROM users WHERE email = $1', [email]);
+			const user = result.rows[0];
+			if (user) {
+				const token = crypto.randomBytes(32).toString('hex');
+				const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+				await db.query(
+					`INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+					 VALUES ($1, $2, NOW() + INTERVAL '30 minutes')`,
+					[user.id, tokenHash],
+				);
+				const appBaseUrl = (process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+				await resetMailer({ to: user.email, resetUrl: `${appBaseUrl}/reset-password?token=${token}` });
+			}
+			return res.json(genericResponse);
+		} catch (error) {
+			return next(error);
+		}
+	});
+
+	router.post('/password-reset/confirm', async (req, res, next) => {
+		const token = typeof req.body?.token === 'string' ? req.body.token : '';
+		const password = req.body?.password;
+		if (!token || typeof password !== 'string' || password.length < 8) {
+			return res.status(400).json({ error: 'A reset token and password of at least 8 characters are required' });
+		}
+
+		try {
+			const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+			const passwordHash = await bcrypt.hash(password, 12);
+			const result = await db.query(
+				`WITH consumed AS (
+					 UPDATE password_reset_tokens
+					 SET used_at = NOW()
+					 WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()
+					 RETURNING user_id
+				 ), updated AS (
+					 UPDATE users
+					 SET password_hash = $2, failed_count = 0, locked_until = NULL
+					 FROM consumed
+					 WHERE users.id = consumed.user_id
+					 RETURNING users.id
+				 ), revoked AS (
+					 UPDATE auth_sessions
+					 SET revoked_at = NOW()
+					 WHERE user_id IN (SELECT id FROM updated) AND revoked_at IS NULL
+					 RETURNING token_id
+				 )
+				 SELECT id FROM updated`,
+				[tokenHash, passwordHash],
+			);
+			if (!result.rows[0]) return res.status(400).json({ error: 'Password reset link is invalid or expired' });
+			return res.json({ message: 'Password has been reset' });
+		} catch (error) {
+			return next(error);
+		}
+	});
 
 	return router;
 }

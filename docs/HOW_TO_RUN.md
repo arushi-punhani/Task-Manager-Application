@@ -33,7 +33,7 @@ From the `server/` directory, run `npm run db:seed` to create the demo accounts 
 ## Optional development auth bypass
 To build other modules without logging in, set `DEV_FAKE_USER_ID=1` (and `NODE_ENV=development`) in `server/.env`. The server then treats every request as user 1 (role USER; set `DEV_FAKE_USER_ROLE=ADMIN` to test admin endpoints). Insert a matching row into `users` first. This bypasses authentication and must never be enabled in a shared or deployed environment.
 
-Normal authentication is available at `POST /api/v1/auth/register` and `POST /api/v1/auth/login`. The mock verification email link is printed in the server console. Send the returned JWT as `Authorization: Bearer <token>`; `POST /api/v1/auth/logout` revokes that session.
+Normal authentication is available at `POST /api/v1/auth/register` and `POST /api/v1/auth/login`. Mock verification and password reset links are printed in the server console. Request a reset with `POST /api/v1/auth/password-reset/request` and `{ "email": "user@example.com" }`; submit the link token and a new password (at least 8 characters) to `POST /api/v1/auth/password-reset/confirm`. Reset links expire after 30 minutes and work once. Set `APP_BASE_URL` to the client origin so generated reset links open the right application. Send the returned JWT as `Authorization: Bearer <token>`; `POST /api/v1/auth/logout` revokes that session.
 
 ## Where code goes
 One folder per module in `server/src/modules/`: auth, tasks, collab, notif, report, admin. Each has a `routes.js` with every endpoint from the SAD as a stub that returns 501. Replace a stub with the real code for your story, and keep the story ID (for example TM-F-010) in your commit message and PR.
