@@ -21,7 +21,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 |---|---|---|---|
 | TM-F-001 | Register with email and password | Partial | API and tests done (Arushi). Verification email is a mock (see D1). The register page in the UI is still a placeholder. |
 | TM-F-002 | Login with session token | Partial | API, JWT and session table done and tested. The login page in the UI is still a placeholder. |
-| TM-F-003 | Lock account after 5 failed logins | Not built | Planned for Sprint 2, not completed. |
+| TM-F-003 | Lock account after 5 failed logins | Done | The fifth consecutive bad password locks the account for 15 minutes. Each failed known-account attempt is audited; successful login clears the failure counter. |
 | TM-F-004 | Password reset by time-limited link | Not built | The two endpoints exist and return 501. |
 | TM-F-010 | Create task | Done | Aryan. TC-Task-01. |
 | TM-F-011 | Edit task | Done | Aryan. TC-Task-02. |
@@ -49,7 +49,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 | TM-SR-002 | Salted password hashing | Done | See D2 (bcryptjs). |
 | TM-SR-003 | Role-based access control | Done | 403 for other users' tasks, 404 for missing tasks. TC-Sec-03. |
 | TM-SR-004 | Session tokens with expiry | Done | JWT with expiry, checked against a session table; logout revokes the session. |
-| TM-SR-005 | Log and alert on repeated failed logins | Not built | Depends on TM-F-003. |
+| TM-SR-005 | Log and alert on repeated failed logins | Partial | Failed attempts are recorded in `audit_log` as `LOGIN_FAILED`; no alert delivery or monitoring integration is configured. |
 
 ## 3. Design and behaviour deviations (what was built differently from the documents)
 
