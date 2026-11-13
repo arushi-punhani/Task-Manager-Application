@@ -45,7 +45,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 | TM-NF-004 | WCAG 2.1 AA | Partial | Labelled form fields, visible focus states, keyboard-usable controls and status messages on the Tasks and Dashboard pages. No formal accessibility audit (TC-UX-01) was run. |
 | TM-NF-005 | Deleted task recoverable for 30 days, then purged | Done in PR #66 | Restore by the owner and a daily purge job. TC-Data-01. |
 | TM-NF-006 | Responsive, 360 px and up | Partial | Tasks page checked in a browser at 360 px with no horizontal scroll. Other pages were not checked. |
-| TM-SR-001 | TLS 1.2 or higher | Not built | The app runs over plain HTTP locally. TLS belongs to the deployment. |
+| TM-SR-001 | TLS 1.2 or higher | Partially implemented | Production rejects non-HTTPS requests and deployment guidance requires TLS 1.2 or newer at the trusted TLS-terminating host/proxy. Local development remains HTTP. The deployed TLS configuration still needs verification. |
 | TM-SR-002 | Salted password hashing | Done | See D2 (bcryptjs). |
 | TM-SR-003 | Role-based access control | Done | 403 for other users' tasks, 404 for missing tasks. TC-Sec-03. |
 | TM-SR-004 | Session tokens with expiry | Done | JWT with expiry, checked against a session table; logout revokes the session. |
