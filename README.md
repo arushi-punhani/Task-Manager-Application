@@ -120,7 +120,7 @@ The full list, with the status of all 31 SRS requirements, is in [docs/DEVIATION
 
 - Sprint 1 (19-23 Oct) was not run as planned. Work was compressed into 27-30 Oct and overlapped with Sprint 2.
 - Real email sending is replaced by a mock service (the verification link is printed in the server console).
-- Features not completed: account lockout (TM-F-003), password reset (TM-F-004), list sharing (TM-F-022), reminders and notifications (TM-F-030, TM-F-031) and CSV export (TM-F-041). The login, register and admin pages in the UI are still placeholders.
+- Features not completed: password reset (TM-F-004), list sharing (TM-F-022), reminders and notifications (TM-F-030, TM-F-031) and CSV export (TM-F-041). Account lockout is implemented. The login, register and admin pages in the UI are still placeholders.
 - Items that need a deployed system (TLS, uptime, load and response-time targets: TM-SR-001, TM-NF-001, TM-NF-002, TM-NF-003) are documented rather than measured.
 
 ## Test results
