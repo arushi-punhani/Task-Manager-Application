@@ -35,6 +35,10 @@ To build other modules without logging in, set `DEV_FAKE_USER_ID=1` (and `NODE_E
 
 Normal authentication is available at `POST /api/v1/auth/register` and `POST /api/v1/auth/login`. Mock verification and password reset links are printed in the server console. Request a reset with `POST /api/v1/auth/password-reset/request` and `{ "email": "user@example.com" }`; submit the link token and a new password (at least 8 characters) to `POST /api/v1/auth/password-reset/confirm`. Reset links expire after 30 minutes and work once. Set `APP_BASE_URL` to the client origin so generated reset links open the right application. Send the returned JWT as `Authorization: Bearer <token>`; `POST /api/v1/auth/logout` revokes that session.
 
+Production health probes and restart-on-failure guidance are in [OPERATIONS.md](OPERATIONS.md).
+## HTTPS
+Local development uses plain HTTP at `http://localhost:4000`. In production (`NODE_ENV=production`), the API rejects requests that do not arrive over HTTPS. Terminate TLS at the hosting platform or a trusted reverse proxy with TLS 1.2 or newer enabled, redirect HTTP to HTTPS at that edge, and configure the proxy to overwrite `X-Forwarded-Proto`. Set `TRUST_PROXY=true` only when this trusted proxy is the single hop directly in front of the API; the server then uses that header to verify the original request scheme. Do not expose the production API directly over HTTP.
+
 ## Where code goes
 One folder per module in `server/src/modules/`: auth, tasks, collab, notif, report, admin. Each has a `routes.js` with every endpoint from the SAD as a stub that returns 501. Replace a stub with the real code for your story, and keep the story ID (for example TM-F-010) in your commit message and PR.
 

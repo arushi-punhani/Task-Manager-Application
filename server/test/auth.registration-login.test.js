@@ -126,11 +126,14 @@ test('TC-Auth-02: wrong password and unknown email are both rejected with the sa
               password_hash: await bcrypt.hash('CorrectPass8', 4),
               role: 'USER',
               status: 'ACTIVE',
+              failed_count: 0,
+              locked_until: null,
             }],
           };
         }
         return { rows: [] };
       }
+      if (sql.includes('WITH updated AS')) return { rows: [{ failed_count: 1, locked_until: null }] };
       assert.fail(`Unexpected database query during rejected login: ${sql}`);
     },
   },
@@ -153,6 +156,74 @@ test('TC-Auth-02: wrong password and unknown email are both rejected with the sa
   assert.equal(unknownEmail.status, 401);
   assert.deepEqual(unknownEmailBody, wrongPasswordBody);
 }));
+
+test('TC-Auth-03: the fifth failed login locks for 15 minutes, audits attempts, and a later success clears the counter', async () => {
+  let failedCount = 0;
+  let lockedUntil = null;
+  let auditCount = 0;
+  const app = authApp({
+    db: {
+      async query(sql, params) {
+        if (sql.startsWith('SELECT id, email')) {
+          return {
+            rows: [{
+              id: 4904,
+              email: VALID_EMAIL,
+              password_hash: await bcrypt.hash(VALID_PASSWORD, 4),
+              role: 'USER',
+              status: 'ACTIVE',
+              failed_count: failedCount,
+              locked_until: lockedUntil,
+            }],
+          };
+        }
+        if (sql.includes('WITH updated AS')) {
+          assert.match(sql, /INSERT INTO audit_log \(actor_id, action, target_id, outcome\)/);
+          assert.deepEqual(params, [4904]);
+          auditCount += 1;
+          failedCount = lockedUntil && lockedUntil <= new Date() ? 1 : failedCount + 1;
+          lockedUntil = failedCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+          return { rows: [{ failed_count: failedCount, locked_until: lockedUntil }] };
+        }
+        if (sql.startsWith('UPDATE users SET failed_count = 0')) {
+          failedCount = 0;
+          lockedUntil = null;
+          return { rows: [] };
+        }
+        if (sql.includes('INSERT INTO auth_sessions')) return { rows: [] };
+        assert.fail(`Unexpected database query during lockout check: ${sql}`);
+      },
+    },
+    jwtSecret: () => SECRET,
+    jwtExpiresIn: () => '1h',
+  });
+  await withServer(app, async (base) => {
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const response = await postJson(base, '/api/v1/auth/login', {
+        email: VALID_EMAIL,
+        password: 'WrongPass8',
+      });
+      assert.equal(response.status, attempt === 5 ? 423 : 401);
+    }
+
+    assert.equal(auditCount, 5);
+    const lockedAttempt = await postJson(base, '/api/v1/auth/login', {
+      email: VALID_EMAIL,
+      password: VALID_PASSWORD,
+    });
+    assert.equal(lockedAttempt.status, 423);
+    assert.equal(auditCount, 5);
+
+    lockedUntil = new Date(Date.now() - 1000);
+    const successfulLogin = await postJson(base, '/api/v1/auth/login', {
+      email: VALID_EMAIL,
+      password: VALID_PASSWORD,
+    });
+    assert.equal(successfulLogin.status, 200);
+    assert.equal(failedCount, 0);
+    assert.equal(lockedUntil, null);
+  });
+});
 
 test('TC-Auth-02: login rejects missing credentials before querying the database', withServer(authApp({
   db: {

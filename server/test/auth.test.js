@@ -82,7 +82,11 @@ test('login issues a signed JWT and persists its session', withServer(authApp({
     async query(sql, params) {
       if (sql.startsWith('SELECT id, email')) {
         assert.deepEqual(params, ['arushi@example.com']);
-        return { rows: [{ id: 7, email: params[0], password_hash: await bcrypt.hash('correct-horse', 4), role: 'USER', status: 'ACTIVE' }] };
+        return { rows: [{ id: 7, email: params[0], password_hash: await bcrypt.hash('correct-horse', 4), role: 'USER', status: 'ACTIVE', failed_count: 0, locked_until: null }] };
+      }
+      if (sql.startsWith('UPDATE users SET failed_count = 0')) {
+        assert.deepEqual(params, [7]);
+        return { rows: [] };
       }
       assert.match(sql, /INSERT INTO auth_sessions/);
       const [tokenId, userId, expiresAt] = params;
