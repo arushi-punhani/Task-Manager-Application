@@ -113,7 +113,6 @@ test('comment endpoint creates a comment for an accessible task', async () => {
     async query(sql, params) {
       if (sql.includes('SELECT t.id')) {
         assert.deepEqual(params, [3, 7]);
-
         return {
           rows: [{
             id: 3,

@@ -2,11 +2,12 @@
 const express = require('express');
 const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
+const { sendTaskAssignmentEmail } = require('../auth/mockEmail');
 
 function createCollabRouter({
   db = pool,
   authMiddleware = authenticate,
-  mailer = async () => {}
+  mailer = sendTaskAssignmentEmail
 } = {}) {
   const router = express.Router();
   router.use(authMiddleware);
@@ -134,28 +135,34 @@ function createCollabRouter({
 
       const task = result.rows[0];
 
-      // Get the teammate's email.
+      // Get the teammate's email address.
       const userResult = await db.query(
-        `SELECT email FROM users WHERE id = $1`,
+        'SELECT email FROM users WHERE id = $1',
         [assigneeId]
       );
 
-      if (userResult.rows[0]) {
-        // Create in-app and email notification records.
-        await db.query(
-          `INSERT INTO notifications
-             (user_id, task_id, type, channel)
-           VALUES
-             ($1, $2, 'TASK_ASSIGNED', 'IN_APP'),
-             ($1, $2, 'TASK_ASSIGNED', 'EMAIL')`,
-          [assigneeId, taskId]
-        );
+      if (!userResult.rows[0]) {
+        throw new Error('Assignee email not found');
+      }
 
-        // Send the assignment email.
+      // Save in-app and email notification records.
+      await db.query(
+        `INSERT INTO notifications
+          (user_id, type, task_id, channel, sent_at)
+         VALUES
+          ($1, 'TASK_ASSIGNED', $2, 'IN_APP', NOW()),
+          ($1, 'TASK_ASSIGNED', $2, 'EMAIL', NOW())`,
+        [assigneeId, taskId]
+      );
+
+      // Send assignment email.
+      try {
         await mailer({
           to: userResult.rows[0].email,
           taskTitle: task.title
         });
+      } catch (emailError) {
+        console.error('Assignment email failed:', emailError.message);
       }
 
       return res.json({ task });
