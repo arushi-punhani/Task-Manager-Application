@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('./mockEmail');
+const { recordFailedLogin } = require('./failedLoginMonitor');
 
 function createAuthRouter({
 	db = pool,
@@ -14,8 +15,10 @@ function createAuthRouter({
 	resetMailer = sendPasswordResetEmail,
 	jwtSecret = () => process.env.JWT_SECRET,
 	jwtExpiresIn = () => process.env.JWT_EXPIRES_IN || '1h',
+	failedLoginMonitor,
 } = {}) {
 	const router = express.Router();
+	const onFailedLogin = failedLoginMonitor || (db === pool ? (input) => recordFailedLogin(input).catch(() => {}) : null);
 
 	router.post('/register', async (req, res, next) => {
 		const body = req.body || {};
@@ -95,9 +98,15 @@ function createAuthRouter({
 			);
 			const user = result.rows[0];
 			if (!user) {
+				if (onFailedLogin) {
+					await onFailedLogin({ email, userId: null, ipAddress: req.ip });
+				}
 				return res.status(401).json({ error: 'Invalid email or password' });
 			}
 			if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
+				if (onFailedLogin) {
+					await onFailedLogin({ email, userId: user.id, ipAddress: req.ip });
+				}
 				return res.status(423).json({ error: 'Account temporarily locked', lockedUntil: user.locked_until });
 			}
 			if (!(await bcrypt.compare(password, user.password_hash))) {
@@ -126,6 +135,9 @@ function createAuthRouter({
 					 FROM updated CROSS JOIN logged`,
 					[user.id],
 				);
+				if (onFailedLogin) {
+					await onFailedLogin({ email, userId: user.id, ipAddress: req.ip });
+				}
 				const failedAttempt = failure.rows[0];
 				if (failedAttempt.locked_until) {
 					return res.status(423).json({ error: 'Account temporarily locked', lockedUntil: failedAttempt.locked_until });
