@@ -1,13 +1,42 @@
-// NotifModule (owner: Arya). Base path: /api/v1/notifications
-// Also holds the Reminder Scheduler (TM-F-030): a scheduled job that sends reminders before due dates.
-// Email goes through a mock/sandbox service in this version.
+
 const express = require('express');
-const notImplemented = require('../../middleware/notImplemented');
+const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
 
-const router = express.Router();
-router.use(authenticate);
+function createNotificationsRouter({
+  db = pool,
+  authMiddleware = authenticate
+} = {}) {
+  const router = express.Router();
 
-router.get('/', notImplemented('TM-F-031'));   // list the current user's in-app notifications
+  router.use(authMiddleware);
+
+  // GET /api/v1/notifications
+  // Returns only the logged-in user's in-app notifications.
+  router.get('/', async (req, res, next) => {
+    try {
+      const result = await db.query(
+        `SELECT id, type, task_id, channel, sent_at, read_at
+         FROM notifications
+         WHERE user_id = $1
+           AND channel = 'IN_APP'
+         ORDER BY sent_at DESC NULLS LAST, id DESC
+         LIMIT 100`,
+        [req.user.id]
+      );
+
+      return res.json({
+        notifications: result.rows
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  return router;
+}
+
+const router = createNotificationsRouter();
+router.createNotificationsRouter = createNotificationsRouter;
 
 module.exports = router;

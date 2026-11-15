@@ -1,8 +1,13 @@
 ﻿const express = require('express');
 const pool = require('../../config/db');
 const { authenticate } = require('../../middleware/auth');
+const { sendTaskAssignmentEmail } = require('../auth/mockEmail');
 
-function createCollabRouter({ db = pool, authMiddleware = authenticate } = {}) {
+function createCollabRouter({
+  db = pool,
+  authMiddleware = authenticate,
+  mailer = sendTaskAssignmentEmail
+} = {}) {
   const router = express.Router();
   router.use(authMiddleware);
 
@@ -76,32 +81,71 @@ function createCollabRouter({ db = pool, authMiddleware = authenticate } = {}) {
     }
   });
 
-  router.post('/tasks/:id/assign', async (req, res, next) => {
+    router.post('/tasks/:id/assign', async (req, res, next) => {
     const taskId = Number(req.params.id);
     const assigneeId = Number(req.body?.assigneeId);
+
     if (!Number.isInteger(taskId) || taskId < 1 ||
         !Number.isInteger(assigneeId) || assigneeId < 1) {
       return res.status(400).json({
         error: 'Valid task ID and assigneeId are required'
       });
     }
+
     try {
+      // Assign the task to the teammate.
       const result = await db.query(
         `UPDATE tasks SET assignee_id = $1
          WHERE id = $2 AND owner_id = $3 AND deleted_at IS NULL
          RETURNING id, title, assignee_id`,
         [assigneeId, taskId, req.user.id]
       );
+
       if (!result.rows[0]) {
         return res.status(404).json({
           error: 'Task not found or not owned by you'
         });
       }
+
+      // Get the teammate's email address.
+      const userResult = await db.query(
+        'SELECT email FROM users WHERE id = $1',
+        [assigneeId]
+      );
+
+      if (!userResult.rows[0]) {
+        throw new Error('Assignee email not found');
+      }
+
+      // Save in-app and email notification records.
+      await db.query(
+        `INSERT INTO notifications
+          (user_id, type, task_id, channel, sent_at)
+         VALUES
+          ($1, 'TASK_ASSIGNED', $2, 'IN_APP', NOW()),
+          ($1, 'TASK_ASSIGNED', $2, 'EMAIL', NOW())`,
+        [assigneeId, taskId]
+      );
+
+      // Send mock assignment email.
+      try {
+        await mailer({
+          to: userResult.rows[0].email,
+          taskTitle: result.rows[0].title
+        });
+      } catch (emailError) {
+        console.error('Assignment email failed:', emailError.message);
+      }
+
       return res.json({ task: result.rows[0] });
+
     } catch (error) {
       if (error.code === '23503') {
-        return res.status(400).json({ error: 'Assignee does not exist' });
+        return res.status(400).json({
+          error: 'Assignee does not exist'
+        });
       }
+
       return next(error);
     }
   });
