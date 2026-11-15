@@ -40,7 +40,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 | TM-F-050 | Admin: view, disable, delete users | Partial | API and tests done. The admin page in the UI is still a placeholder. |
 | TM-F-051 | Audit log of admin actions | Partial | Admin actions and task deletes are written to the audit log (restores and purges too, with PR #66). The endpoint to view the log returns 501. |
 | TM-NF-001 | Response time p95 at most 2 s | Not measured | No load or performance test was run. |
-| TM-NF-002 | Uptime at least 99.5% | Not measured | Needs a deployed system; the project runs locally only. |
+| TM-NF-002 | Uptime at least 99.5% | Not measured | Liveness/readiness probes and restart-on-failure deployment guidance are documented in `docs/OPERATIONS.md`. There is no deployed service or monitoring period, so 99.5% uptime remains unverified. |
 | TM-NF-003 | Scale to 10,000 users and 1,000,000 tasks | Not measured | Indexes exist on the common filter columns (see `db/schema.sql`), but no load test was run. |
 | TM-NF-004 | WCAG 2.1 AA | Partial | Labelled form fields, visible focus states, keyboard-usable controls and status messages on the Tasks and Dashboard pages. No formal accessibility audit (TC-UX-01) was run. |
 | TM-NF-005 | Deleted task recoverable for 30 days, then purged | Done in PR #66 | Restore by the owner and a daily purge job. TC-Data-01. |
