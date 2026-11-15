@@ -116,17 +116,22 @@ Rules:
 
 ## Deviations from submitted documents
 
-The full list, with the status of all 31 SRS requirements, is in [docs/DEVIATIONS.md](docs/DEVIATIONS.md). In short:
+The full list, with the status of all 31 SRS requirements, is in [docs/DEVIATIONS.md](docs/DEVIATIONS.md). Status below is as of 15 Nov 2026 on `main`. In short:
 
-- Sprint 1 (19-23 Oct) was not run as planned. Work was compressed into 27-30 Oct and overlapped with Sprint 2.
-- Real email sending is replaced by a mock service (the verification link is printed in the server console).
-- Features not completed: password reset (TM-F-004), list sharing (TM-F-022), reminders and notifications (TM-F-030, TM-F-031) and CSV export (TM-F-041). Account lockout is implemented. The login, register and admin pages in the UI are still placeholders.
-- Items that need a deployed system (TLS, uptime, load and response-time targets: TM-SR-001, TM-NF-001, TM-NF-002, TM-NF-003) are documented rather than measured.
+- Sprint 1 (19-23 Oct) was not run as planned. Work was compressed into 27-30 Oct and overlapped with Sprint 2. Several Sprint 2 features were merged after the 30 Oct freeze (12-15 Nov); nothing was backdated.
+- Real email sending is replaced by a mock service (verification, password reset and assignment emails are printed in the server console).
+- Password reset (TM-F-004), list sharing (TM-F-022), due-date reminders (TM-F-030) and assignment notifications (TM-F-031) work through the API only; the web UI has no screens for them. Reminders use a fixed 24-hour window.
+- CSV export works; PDF export (TM-F-041) is not included and returns 501.
+- Account lockout, the login, register and admin pages, the audit log endpoint and failed-login alerts are implemented. TLS is enforced in production mode only, and TLS 1.2+ must be set up at the host or proxy (TM-SR-001).
+- Items that need a deployed system (uptime, load and response-time targets, a formal accessibility audit: TM-NF-001 to TM-NF-004) are documented rather than measured.
 
 ## Test results
 
 - Sprint 1 task features: [docs/TEST_RESULTS_TASKS.md](docs/TEST_RESULTS_TASKS.md)
 - Sprint 2 task features (tags, search, filter, sort, restore and purge): [docs/TEST_RESULTS_TASKS_SPRINT2.md](docs/TEST_RESULTS_TASKS_SPRINT2.md)
+- Authentication: [docs/TEST_RESULTS_AUTH.md](docs/TEST_RESULTS_AUTH.md)
+- Admin and reports: [docs/TEST_RESULTS_ADMIN_REPORTS.md](docs/TEST_RESULTS_ADMIN_REPORTS.md)
+- Operations (health probes, deployment notes): [docs/OPERATIONS.md](docs/OPERATIONS.md)
 
 ## How to run
 
