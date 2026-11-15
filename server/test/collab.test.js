@@ -113,7 +113,12 @@ test('comment endpoint creates a comment for an accessible task', async () => {
     async query(sql, params) {
       if (sql.includes('SELECT t.id')) {
         assert.deepEqual(params, [3, 7]);
-        return { rows: [{ id: 3 }] };
+        return {
+          rows: [{
+            id: 3,
+            access: 'OWNER'
+          }]
+        };
       }
 
       assert.match(sql, /INSERT INTO comments/);
@@ -155,4 +160,43 @@ test('comment endpoint rejects empty comments', async () => {
       assert.equal(res.status, 400);
     }
   );
+});
+
+test('VIEW permission cannot add comments', async () => {
+  let commentInserted = false;
+
+  await withServer({
+    async query(sql) {
+      if (sql.includes('SELECT t.id')) {
+        return {
+          rows: [{
+            id: 3,
+            access: 'VIEW'
+          }]
+        };
+      }
+
+      if (sql.includes('INSERT INTO comments')) {
+        commentInserted = true;
+      }
+
+      throw new Error(`Unexpected query: ${sql}`);
+    }
+  }, async base => {
+    const res = await fetch(`${base}/tasks/3/comments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: 'View-only user comment' })
+    });
+
+    assert.equal(res.status, 403);
+
+    const body = await res.json();
+    assert.equal(
+      body.error,
+      'You do not have permission to comment on this task'
+    );
+  });
+
+  assert.equal(commentInserted, false);
 });
