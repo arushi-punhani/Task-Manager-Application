@@ -89,16 +89,51 @@ function createAuthRouter({
 
 		try {
 			const result = await db.query(
-				'SELECT id, email, password_hash, role, status FROM users WHERE email = $1',
+				'SELECT id, email, password_hash, role, status, failed_count, locked_until FROM users WHERE email = $1',
 				[email],
 			);
 			const user = result.rows[0];
-			if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+			if (!user) {
+				return res.status(401).json({ error: 'Invalid email or password' });
+			}
+			if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
+				return res.status(423).json({ error: 'Account temporarily locked', lockedUntil: user.locked_until });
+			}
+			if (!(await bcrypt.compare(password, user.password_hash))) {
+				const failure = await db.query(
+					`WITH updated AS (
+						 UPDATE users
+						 SET failed_count = CASE
+						       WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN 1
+						       ELSE failed_count + 1
+						     END,
+						     locked_until = CASE
+						       WHEN (CASE
+						         WHEN locked_until IS NOT NULL AND locked_until <= NOW() THEN 1
+						         ELSE failed_count + 1
+						       END) >= 5 THEN NOW() + INTERVAL '15 minutes'
+						       ELSE NULL
+						     END
+						 WHERE id = $1
+						 RETURNING id, failed_count, locked_until
+					 ), logged AS (
+						 INSERT INTO audit_log (actor_id, action, target_id, outcome)
+						 SELECT NULL, 'LOGIN_FAILED', id, 'FAILURE' FROM updated
+						 RETURNING id
+					 )
+					 SELECT updated.failed_count, updated.locked_until
+					 FROM updated CROSS JOIN logged`,
+					[user.id],
+				);
+				const failedAttempt = failure.rows[0];
+				if (failedAttempt.locked_until) {
+					return res.status(423).json({ error: 'Account temporarily locked', lockedUntil: failedAttempt.locked_until });
+				}
 				return res.status(401).json({ error: 'Invalid email or password' });
 			}
 			if (user.status !== 'ACTIVE') return res.status(403).json({ error: 'Account is disabled' });
 			if (!jwtSecret()) return res.status(500).json({ error: 'Authentication is not configured' });
-
+			await db.query('UPDATE users SET failed_count = 0, locked_until = NULL WHERE id = $1', [user.id]);
 			const tokenId = crypto.randomUUID();
 			const token = jwt.sign({ role: user.role }, jwtSecret(), {
 				subject: String(user.id),

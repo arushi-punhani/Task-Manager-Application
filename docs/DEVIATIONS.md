@@ -21,7 +21,7 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 |---|---|---|---|
 | TM-F-001 | Register with email and password | Partial | API and tests done (Arushi). Verification email is a mock (see D1). The register page in the UI is still a placeholder. |
 | TM-F-002 | Login with session token | Partial | API, JWT and session table done and tested. The login page in the UI is still a placeholder. |
-| TM-F-003 | Lock account after 5 failed logins | Not built | Planned for Sprint 2, not completed. |
+| TM-F-003 | Lock account after 5 failed logins | Done | The fifth consecutive bad password locks the account for 15 minutes. Each failed known-account attempt is audited; successful login clears the failure counter. |
 | TM-F-004 | Password reset by time-limited link | Not built | The two endpoints exist and return 501. |
 | TM-F-010 | Create task | Done | Aryan. TC-Task-01. |
 | TM-F-011 | Edit task | Done | Aryan. TC-Task-02. |
@@ -45,11 +45,11 @@ Team 6, Task Manager Application. Status recorded on **30 Oct 2026 (development 
 | TM-NF-004 | WCAG 2.1 AA | Partial | Labelled form fields, visible focus states, keyboard-usable controls and status messages on the Tasks and Dashboard pages. No formal accessibility audit (TC-UX-01) was run. |
 | TM-NF-005 | Deleted task recoverable for 30 days, then purged | Done in PR #66 | Restore by the owner and a daily purge job. TC-Data-01. |
 | TM-NF-006 | Responsive, 360 px and up | Partial | Tasks page checked in a browser at 360 px with no horizontal scroll. Other pages were not checked. |
-| TM-SR-001 | TLS 1.2 or higher | Not built | The app runs over plain HTTP locally. TLS belongs to the deployment. |
+| TM-SR-001 | TLS 1.2 or higher | Partially implemented | Production rejects non-HTTPS requests and deployment guidance requires TLS 1.2 or newer at the trusted TLS-terminating host/proxy. Local development remains HTTP. The deployed TLS configuration still needs verification. |
 | TM-SR-002 | Salted password hashing | Done | See D2 (bcryptjs). |
 | TM-SR-003 | Role-based access control | Done | 403 for other users' tasks, 404 for missing tasks. TC-Sec-03. |
 | TM-SR-004 | Session tokens with expiry | Done | JWT with expiry, checked against a session table; logout revokes the session. |
-| TM-SR-005 | Log and alert on repeated failed logins | Not built | Depends on TM-F-003. |
+| TM-SR-005 | Log and alert on repeated failed logins | Partial | Failed attempts are recorded in `audit_log` as `LOGIN_FAILED`; no alert delivery or monitoring integration is configured. |
 
 ## 3. Design and behaviour deviations (what was built differently from the documents)
 
