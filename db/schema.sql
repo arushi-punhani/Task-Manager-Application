@@ -116,3 +116,18 @@ CREATE TABLE audit_log (
   outcome   VARCHAR(20) NOT NULL DEFAULT 'SUCCESS'
 );
 CREATE INDEX idx_audit_actor ON audit_log(actor_id);
+
+CREATE TABLE IF NOT EXISTS auth_security_events (
+  id           BIGSERIAL PRIMARY KEY,
+  event_type   VARCHAR(30) NOT NULL CHECK (event_type IN ('FAILED_LOGIN', 'BRUTE_FORCE_ALERT')),
+  subject_type VARCHAR(10) NOT NULL CHECK (subject_type IN ('ACCOUNT', 'IP')),
+  subject_hash CHAR(64) NOT NULL,
+  user_id      INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  remote_ip    INET,
+  occurred_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_auth_security_subject_window
+  ON auth_security_events(subject_type, subject_hash, event_type, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_auth_security_ip_window
+  ON auth_security_events(remote_ip, event_type, occurred_at DESC);
+
