@@ -44,7 +44,7 @@ async function seedDemoData(db = pool) {
       const completedAt = task.status === 'COMPLETED' ? new Date() : null;
       await client.query(
         `INSERT INTO tasks (owner_id, assignee_id, title, description, due_date, priority, status, completed_at)
-         SELECT $1, $2, $3, $4, $5, $6, $7, $8
+         SELECT $1::int,$2::int,  $3::text, $4::text, $5::timestamptz, $6::text, $7::text, $8::timestamptz
          WHERE NOT EXISTS (
            SELECT 1 FROM tasks WHERE owner_id = $1 AND title = $3 AND deleted_at IS NULL
          )`,
