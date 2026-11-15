@@ -1,6 +1,6 @@
 # Deviations from the submitted documents (SRS, SAD, Test Plan)
 
-Team 6, Task Manager Application. Status recorded on **15 Nov 2026** against the latest `main` (merge of PR #81, commit `a9acbc2`). The server test suite on that commit passes (172 of 172). The development freeze was 30 Oct 2026; several features were merged after it (see P7). Each deviation below is something we will explain at the final demo.
+Team 6, Task Manager Application. Status recorded on **16 Nov 2026** against the latest `main` (code last changed by PR #81, commit `a9acbc2`; since then only documentation and the demo seed script changed). The server test suite on that commit passes (172 of 172). The development freeze was 30 Oct 2026; several features were merged after it (see P7). Each deviation below is something we will explain at the final demo.
 
 ## 1. Process deviations
 
@@ -13,6 +13,7 @@ Team 6, Task Manager Application. Status recorded on **15 Nov 2026** against the
 | P5 | AI assistance (Claude) was used to write parts of the code, tests and documents, as the assignment allows (Sprint 1 item e). Some commits carry a `Co-Authored-By` line. | Time pressure. | Each author reviewed, ran and tested the code and can explain it. Tests were also run against a real PostgreSQL database and in a browser. |
 | P6 | The Sprint 1 demo video (`docs/demo/sprint1-video.mp4`) was committed directly to `main` by the Dev Lead instead of through a pull request. | A mistake when uploading the file: it was committed on `main` rather than on a branch. | The video is in the repo, and card #43 was closed manually. |
 | P7 | Several features were merged after the 30 Oct freeze: CSV export and responsive/accessibility changes (12 Nov), account lockout, password reset API, HTTPS enforcement and health probes (13 Nov), due-date reminders (13 Nov), and assignment notifications, list sharing and failed-login alerts (15 Nov). | Teammates' Sprint 2 stories were not finished by the freeze. | These merges are after the freeze and we did not backdate anything. Their dates are visible in the commit and PR history. The requirement table below describes `main` as it is now. |
+| P8 | A fix to `server/scripts/seed-demo.js` (explicit type casts so `npm run db:seed` works on PostgreSQL 18) was committed directly to `main` on 16 Nov (commit `d70f9bf`), not through a pull request. | The Dev Lead edited the file while preparing the Sprint 2 demo and committed it on `main` by mistake. | It only changes the demo seed script, not the application. It was tested against a real PostgreSQL database. |
 
 ## 2. Requirement status (all 31 SRS requirements)
 
@@ -71,6 +72,7 @@ Team 6, Task Manager Application. Status recorded on **15 Nov 2026** against the
 | D13 | Reminders are configurable and can be sent by email (TM-F-030). | A fixed 24-hour in-app reminder, found by polling every 30 seconds. | Keeps the feature small and testable without an email provider. |
 | D14 | Export as CSV or PDF (TM-F-041). | CSV only. The PDF request returns 501 with a clear message. | CSV covers the main use; PDF was out of scope for the time left. |
 | D15 | Sharing, notifications, reminders and password reset are user features. | They work through the API and are covered by tests, but the web UI has no screens for them. | UI work was not finished. They are shown in the demo through the API. |
+| D16 | The task detail page uses the signed-in user's session. | The task detail page (assign and comments, TM-F-020 and TM-F-021) has its own "Login token" box. The user pastes a token and clicks "Load task details" before teammates and comments appear. It is not connected to the login page, and it only loads tasks the signed-in user can access. | The page was built against the API before the login page was merged and was not reconnected. |
 
 ## 4. Testing deviations
 
@@ -81,7 +83,8 @@ Team 6, Task Manager Application. Status recorded on **15 Nov 2026** against the
 
 ## 5. Demo videos
 
-- Sprint 1 (1 minute) and Sprint 2 (2 minutes) videos are in the `docs/demo/` folder when uploaded. The Sprint 1 video is `docs/demo/sprint1-video.mp4` (see P6).
+- Sprint 1 video: `docs/demo/sprint1-video.mp4` (see P6).
+- Sprint 2 video (about 2 minutes): `docs/demo/sprint2-video.mp4`. It was compressed (H.264, 1280 px wide) so the file is small enough to push to GitHub, and it was added through a pull request.
 
 ## 6. Keeping this document correct
 
