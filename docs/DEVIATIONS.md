@@ -1,6 +1,6 @@
 # Deviations from the submitted documents (SRS, SAD, Test Plan)
 
-Team 6, Task Manager Application. Status recorded on **16 Nov 2026** against the latest `main` (code last changed by PR #81, commit `a9acbc2`; since then only documentation and the demo seed script changed). The server test suite on that commit passes (172 of 172). The development freeze was 30 Oct 2026; several features were merged after it (see P7). Each deviation below is something we will explain at the final demo.
+Team 6, Task Manager Application. Status recorded on **16 Nov 2026** against the latest `main` (code last changed by PR #81, commit `a9acbc2`; since then only documentation and the demo seed script changed). The unit tests pass (173 test cases), the system tests pass (18 of 18) and line, branch and function coverage are 87.1%, 81.2% and 82.9% (see section 4). The development freeze was 30 Oct 2026; several features were merged after it (see P7). Each deviation below is something we will explain at the final demo.
 
 ## 1. Process deviations
 
@@ -24,7 +24,7 @@ Team 6, Task Manager Application. Status recorded on **16 Nov 2026** against the
 | TM-F-001 | Register with email and password | Done | API, tests and the register page. Verification email is a mock (see D1). |
 | TM-F-002 | Login with session token | Done | API, JWT, session table and the login page. |
 | TM-F-003 | Lock account after 5 failed logins | Done | The fifth consecutive bad password locks the account for 15 minutes (HTTP 423). A successful login clears the counter. |
-| TM-F-004 | Password reset by time-limited link | API only | Reset tokens are hashed, expire after 30 minutes and are used once. The email is mocked (D1). There is no reset page in the UI. |
+| TM-F-004 | Password reset by time-limited link | API only | Reset tokens are hashed, expire after 30 minutes and are used once. The email is mocked (D1). There is no reset page in the UI. The system test found that the reset request crashed for existing accounts because the default mock mailer was missing; this is fixed (defect SD-1 in TEST_RESULTS_SYSTEM.md). |
 | TM-F-010 | Create task | Done | TC-Task-01. |
 | TM-F-011 | Edit task | Done | TC-Task-02. |
 | TM-F-012 | Delete task (soft delete, confirmation) | Done | TC-Task-03. |
@@ -35,7 +35,7 @@ Team 6, Task Manager Application. Status recorded on **16 Nov 2026** against the
 | TM-F-020 | Assign task to a teammate | Done | Task detail page. |
 | TM-F-021 | Comments on shared or assigned tasks | Done | Task detail page. |
 | TM-F-022 | Share list with view or edit permission | API only | Create and manage shares through the API, with access rules enforced (TM-SR-003). No sharing screen in the UI. |
-| TM-F-030 | Due-date reminder | Partial | In-app reminders for tasks due within a fixed 24 hours, checked by polling every 30 seconds. The reminder time is not configurable and there is no email or push reminder. API only: the UI does not show reminders. |
+| TM-F-030 | Due-date reminder | Partial | One in-app reminder is created about 24 hours before the due time, found by polling every 30 seconds. The reminder time is not configurable and there is no email or push reminder. API only: the UI does not show reminders. |
 | TM-F-031 | Notify teammate on assignment | Partial | In-app notification plus a mock email (D1). API only: the UI does not show notifications. |
 | TM-F-040 | Dashboard summary | Done | Dashboard page. |
 | TM-F-041 | Export tasks as CSV or PDF | Partial | CSV export works from the Dashboard. PDF export returns 501 (not included). |
@@ -69,15 +69,25 @@ Team 6, Task Manager Application. Status recorded on **16 Nov 2026** against the
 | D10 | Task list for a user. | The list returns at most 100 tasks. There is no paging. | Enough for the demo and tests. |
 | D11 | Users sign in through the login page. | The login and register pages now exist. The `DEV_FAKE_USER_ID` option (development only, one fixed user) is still in the server for demos, but it is no longer needed. | It was added while the login and register pages were unfinished. This option is documented in `docs/HOW_TO_RUN.md` and must never be used in a shared or deployed environment. |
 | D12 | Tags on a shared task. | A user with EDIT access can change the tags of a shared task; the tags are saved under the task owner's tags. | Keeps tag names consistent per owner. |
-| D13 | Reminders are configurable and can be sent by email (TM-F-030). | A fixed 24-hour in-app reminder, found by polling every 30 seconds. | Keeps the feature small and testable without an email provider. |
+| D13 | Reminders are configurable and can be sent by email (TM-F-030). | A fixed in-app reminder about 24 hours before the due time, found by polling every 30 seconds. | Keeps the feature small and testable without an email provider. |
 | D14 | Export as CSV or PDF (TM-F-041). | CSV only. The PDF request returns 501 with a clear message. | CSV covers the main use; PDF was out of scope for the time left. |
 | D15 | Sharing, notifications, reminders and password reset are user features. | They work through the API and are covered by tests, but the web UI has no screens for them. | UI work was not finished. They are shown in the demo through the API. |
 | D16 | The task detail page uses the signed-in user's session. | The task detail page (assign and comments, TM-F-020 and TM-F-021) has its own "Login token" box. The user pastes a token and clicks "Load task details" before teammates and comments appear. It is not connected to the login page, and it only loads tasks the signed-in user can access. | The page was built against the API before the login page was merged and was not reconnected. |
 
-## 4. Testing deviations
+## 4. Testing
 
-- Automated tests use a mock database (172 server tests, all passing on the latest `main`). Because mock tests cannot prove the SQL is valid, we also run repeatable checks against a real PostgreSQL database. Results are in `docs/TEST_RESULTS_TASKS.md`, `docs/TEST_RESULTS_TASKS_SPRINT2.md`, `docs/TEST_RESULTS_AUTH.md` and `docs/TEST_RESULTS_ADMIN_REPORTS.md`.
-- Browser checks of the Tasks page were run by hand (not part of CI) and are described in the task test result files.
+| Kind | Result | Report |
+|---|---|---|
+| Unit tests (mock database) | 173 test cases in 26 files, all passing | [TEST_RESULTS_UNIT.md](TEST_RESULTS_UNIT.md) |
+| System tests (real application and real PostgreSQL) | 18 of 18 cases passing | [TEST_RESULTS_SYSTEM.md](TEST_RESULTS_SYSTEM.md) |
+| Code coverage (unit tests, server code) | 87.14% line, 81.19% branch, 82.93% function | [TEST_COVERAGE.md](TEST_COVERAGE.md) |
+
+Other test records: `TEST_RESULTS_TASKS.md`, `TEST_RESULTS_TASKS_SPRINT2.md`, `TEST_RESULTS_AUTH.md` and `TEST_RESULTS_ADMIN_REPORTS.md`.
+
+Deviations in testing:
+- The unit tests use a mock database and cannot prove the SQL is valid, so we added the system tests and the real-database scripts.
+- The system tests call the API; they do not drive the web pages. The React client has no automated tests and no coverage figure. The Tasks page was checked by hand in a browser.
+- Coverage is measured on the unit tests only, so it understates what the system tests also exercise.
 - Not run: performance (TC-Perf-01), uptime, scalability, a formal accessibility audit (TC-UX-01) and TLS checks. These need a deployed environment or special tooling.
 - Test Plan cases for the features marked "Not measured" above were not executed.
 

@@ -127,11 +127,16 @@ The full list, with the status of all 31 SRS requirements, is in [docs/DEVIATION
 
 ## Test results
 
+- Unit tests: [docs/TEST_RESULTS_UNIT.md](docs/TEST_RESULTS_UNIT.md) (173 test cases, all passing)
+- System tests: [docs/TEST_RESULTS_SYSTEM.md](docs/TEST_RESULTS_SYSTEM.md) (18 of 18 passing, real database)
+- Code coverage: [docs/TEST_COVERAGE.md](docs/TEST_COVERAGE.md) (87.14% line, 81.19% branch, 82.93% function)
 - Sprint 1 task features: [docs/TEST_RESULTS_TASKS.md](docs/TEST_RESULTS_TASKS.md)
-- Sprint 2 task features (tags, search, filter, sort, restore and purge): [docs/TEST_RESULTS_TASKS_SPRINT2.md](docs/TEST_RESULTS_TASKS_SPRINT2.md)
+- Sprint 2 task features: [docs/TEST_RESULTS_TASKS_SPRINT2.md](docs/TEST_RESULTS_TASKS_SPRINT2.md)
 - Authentication: [docs/TEST_RESULTS_AUTH.md](docs/TEST_RESULTS_AUTH.md)
 - Admin and reports: [docs/TEST_RESULTS_ADMIN_REPORTS.md](docs/TEST_RESULTS_ADMIN_REPORTS.md)
 - Operations (health probes, deployment notes): [docs/OPERATIONS.md](docs/OPERATIONS.md)
+
+To run them: `cd server && npm test` (unit), `npm run test:coverage` (coverage), and `npm run test:system` (system, needs a `_test` PostgreSQL database; see the system test report).
 
 ## How to run
 
