@@ -46,9 +46,3 @@ The script empties most tables, so it refuses to run unless the database name en
 |---|---|---|---|---|
 | SD-1 | SYS-13 | `POST /auth/password-reset/request` returned a server error for any existing account in the real application. The auth router imports `sendPasswordResetEmail` from `mockEmail.js`, but that function was never exported, and the unit tests passed their own mailer so they did not notice. | Added `sendPasswordResetEmail` to `server/src/modules/auth/mockEmail.js` and a unit test (`mockEmail.test.js`) that fails if a mailer is not exported. | Fixed. SYS-13 now passes. |
 
-## Limits (stated honestly)
-
-- The system tests call the API. They do not drive the web pages. The UI was checked by hand in a browser.
-- The reminder case (SYS-11) moves a task's due date in the database so the check runs immediately. The reminder itself is created by the real reminder code.
-- The reminder fires once, about 24 hours before the due time (a task due in the next minute window of 23h59m to 24h). A task due in 3 hours gets no reminder. This matches the fixed 24-hour design in DEVIATIONS.md (D13).
-- Not covered: response time, uptime, scale, a deployed TLS setup, and a formal accessibility audit (see DEVIATIONS.md).
